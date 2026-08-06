@@ -151,3 +151,18 @@ The following choices must be made and documented:
 - Testing approach, limitations, and trade-offs.
 - AI usage log / traceability notes.
 - Final engineering summary covering plan/rationale, artifacts, risks/trade-offs, validation, assumptions, and limitations.
+
+## Business-Facing Success Criteria and Traceability
+
+| ID | Demonstrable business outcome | Assignment requirement |
+|---|---|---|
+| BO-1 | Authorized applications can record what happened, who caused it, what was affected, relevant details, and when it occurred. | Scenario A — Write API and its minimum event fields. |
+| BO-2 | Recorded events cannot be changed or deleted through the service. | Scenario A — records are append-only; no update or delete operation. |
+| BO-3 | Authorized reviewers can find events by actor, affected resource, event type, and time range, including paging through large results. | Scenario A — Query API filters and pagination. |
+| BO-4 | The service can confirm trustworthy history and identify the first affected record after direct data-store tampering. | Scenario A — hash chain, `GET /audit/verify`, and prescribed tampering validation. |
+| BO-5 | Records can be handled under the configured retention policy without a false tampering result. | Scenario B — Retention Policy and verification of legitimately archived records. |
+| BO-6 | Sensitive payload details can be redacted while the audit history remains verifiable. | Scenario B — Structured Redaction. |
+| BO-7 | Records for a selected actor or resource can be exported in a bundle that a recipient can independently verify. | Scenario B — Bulk Export. |
+| BO-8 | The prototype presents a clarified and demonstrable way to audit access to client account data, with explicit scope and exclusions. | Scenario C — Compliance Reporting clarification, design, and implementation or documented partial implementation. |
+
+Each business outcome above maps to an explicit assignment requirement. Prototype acceptance checks should be derived from these outcomes without expanding their scope.
