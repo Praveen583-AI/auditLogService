@@ -153,7 +153,7 @@ Authorized archival must not look like deletion. A completed, immutable `Archive
 - predecessor hash and terminal hash;
 - hash and canonicalization versions;
 - archive format version;
-- immutable object locator and complete-object digest;
+- archive object locator and complete-object digest;
 - retention policy version;
 - completion time and responsible action identity.
 
@@ -163,9 +163,14 @@ The archive object is written and verified before the manifest becomes complete.
 
 An internal chain detects ordinary changes, but an operator able to replace every event and the `ChainHead` could recompute a consistent history. Two controls strengthen detection.
 
-### Immutable archive manifests
+### Archive manifests and production immutability
 
-A manifest and archive object protected by retention lock, separate credentials, or a separate administrative boundary preserve old range digests and chain boundaries. A rewritten database will no longer agree with that independently protected evidence.
+The prototype persists a signed, append-only `ArchiveManifest` and stores the
+bundle through a create-only local-file adapter. This detects later bundle
+changes but does not establish an independent administrative boundary. In
+production, retention lock, separate credentials, or independently controlled
+storage would preserve range digests and boundaries against a privileged
+database rewrite.
 
 A manifest under the same unrestricted administrator is still useful for lifecycle verification, but it does not independently defeat a coordinated rewrite.
 
