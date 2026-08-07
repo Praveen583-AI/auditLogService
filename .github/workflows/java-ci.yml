@@ -1,4 +1,3 @@
-
 name: Java CI
 
 on:
@@ -22,7 +21,11 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
-      - name: Run tests
+      - name: Run framework-independent unit tests
+        run: >-
+          mvn --batch-mode --no-transfer-progress
+          -Dtest=CanonicalizerTest,HashChainTest,AuthorizationPolicyTest test
+      - name: Run full test suite
         run: mvn --batch-mode --no-transfer-progress test
       - name: Report test failures
         if: failure()
@@ -35,4 +38,3 @@ jobs:
             details=${details//$'\r'/'%0D'}
             echo "::error file=pom.xml,title=Maven test failure::$details"
           fi
-
