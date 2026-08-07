@@ -5,6 +5,7 @@ import com.praveen.auditlog.api.dto.CreateAuditEventRequest;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessResourceFailureException;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -25,8 +26,10 @@ class AuditWriteFailureMappingTest {
             mock(TransactionalAuditAppender.class);
     private final RetryPolicy retryPolicy =
             mock(RetryPolicy.class);
+    private final OperationalMetrics metrics =
+            new OperationalMetrics(new SimpleMeterRegistry());
     private final AuditWriteService service =
-            new AuditWriteService(appender, retryPolicy);
+            new AuditWriteService(appender, retryPolicy, metrics);
 
     @Test
     void lockTimeoutRetriesWithANewTransactionalCall() {
@@ -61,7 +64,7 @@ class AuditWriteFailureMappingTest {
         given(retryPolicy.maxAttempts()).willReturn(3);
         given(appender.append(eq("key"), nullable(CreateAuditEventRequest.class)))
                 .willThrow(new DataAccessResourceFailureException(
-                        "host=db-secret password=secret"
+                        "fixture-sensitive-connection-detail"
                 ));
 
         assertThatThrownBy(() -> service.create("key", null))

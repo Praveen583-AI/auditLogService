@@ -15,6 +15,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Scan Git history for secrets
+        uses: gitleaks/gitleaks-action@v2
       - name: Set up Java 17
         uses: actions/setup-java@v5
         with:
@@ -26,7 +30,7 @@ jobs:
           mvn --batch-mode --no-transfer-progress
           -Dtest=CanonicalizerTest,HashChainTest,AuthorizationPolicyTest test
       - name: Run full test suite
-        run: mvn --batch-mode --no-transfer-progress test
+        run: mvn --batch-mode --no-transfer-progress clean test
       - name: Repeat concurrency contract
         run: |
           for run in 1 2 3; do

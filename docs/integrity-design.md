@@ -135,7 +135,11 @@ A verification run selects a stable chain boundary and then:
 6. compares each `previousHash` with the prior verified digest;
 7. checks the final digest and sequence against the selected head or trusted anchor;
 8. verifies any archive-object digest and manifest boundaries;
-9. appends an immutable `VerificationResult`.
+9. returns a `VerificationResult` for the completed operation.
+
+The prototype does not persist verification results. Persisting an append-only
+history of scheduled or regulator-initiated verification runs is a production
+enhancement, not an implemented control.
 
 The result is `intact`, `broken`, or `incomplete`. It records the scope, versions, records checked, and first inconsistency. A missing archive or unsupported historical version produces `incomplete`, not a false claim of integrity.
 

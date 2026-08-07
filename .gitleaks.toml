@@ -1,0 +1,8 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Historical synthetic idempotency fixture; not a credential"
+regexes = [
+  '''01J4QX8T2M7K9P3Y6R5N1C0BHA'''
+]
