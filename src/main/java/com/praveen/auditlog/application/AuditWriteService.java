@@ -6,6 +6,7 @@ import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.TransactionSystemException;
 
 @Service
 public class AuditWriteService implements CreateAuditEventUseCase {
@@ -82,6 +83,14 @@ public class AuditWriteService implements CreateAuditEventUseCase {
     ) {
         Throwable current = failure;
         for (int depth = 0; current != null && depth < 20; depth++) {
+            if (current instanceof TransactionSystemException transactionFailure) {
+                Throwable original = transactionFailure.getOriginalException();
+                if (original != null
+                        && original != transactionFailure.getCause()
+                        && hasSqlState(original, expected, prefix)) {
+                    return true;
+                }
+            }
             if (current instanceof java.sql.SQLException sqlException) {
                 java.sql.SQLException candidate = sqlException;
                 while (candidate != null) {
