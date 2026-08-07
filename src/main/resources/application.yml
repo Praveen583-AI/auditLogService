@@ -12,6 +12,7 @@ server:
 logging:
   level:
     root: INFO
+    com.zaxxer.hikari.pool.ProxyConnection: ERROR
     org.springframework.jdbc.core: WARN
     org.springframework.transaction.interceptor.TransactionInterceptor: OFF
     org.springframework.web: WARN
