@@ -1,3 +1,4 @@
+
 name: Java CI
 
 on:
@@ -23,3 +24,15 @@ jobs:
           cache: maven
       - name: Run tests
         run: mvn --batch-mode --no-transfer-progress test
+      - name: Report test failures
+        if: failure()
+        shell: bash
+        run: |
+          if compgen -G "target/surefire-reports/*.txt" > /dev/null; then
+            details=$(cat target/surefire-reports/*.txt | tail -c 50000)
+            details=${details//'%'/'%25'}
+            details=${details//$'\n'/'%0A'}
+            details=${details//$'\r'/'%0D'}
+            echo "::error file=pom.xml,title=Maven test failure::$details"
+          fi
+

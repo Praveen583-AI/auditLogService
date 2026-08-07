@@ -1,3 +1,4 @@
+
 package com.praveen.auditlog.application;
 
 import java.util.Objects;
@@ -87,6 +88,12 @@ public record VerificationResult(
         UNSUPPORTED_CANONICALIZATION_VERSION,
         UNSUPPORTED_HASH_ALGORITHM,
         CHAIN_HEAD_MISMATCH,
-        MISSING_ARCHIVE_PROOF
+        MISSING_ARCHIVE_PROOF,
+        ARCHIVE_CHECKSUM_MISMATCH,
+        ARCHIVE_SIGNATURE_INVALID,
+        ARCHIVE_RANGE_INVALID,
+        ARCHIVE_CHAIN_INVALID,
+        ARCHIVE_BOUNDARY_MISMATCH
     }
 }
+
