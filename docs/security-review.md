@@ -2,6 +2,19 @@
 
 ## Security conclusion
 
+Status terms in this repository have strict meanings:
+
+- **Implemented:** present in application code and covered by an automated or
+  repeatable validation identified in `test-traceability.md`.
+- **Application service:** implemented below HTTP, but not available as a
+  production endpoint or worker.
+- **Documented assumption:** used to bound the prototype because the assignment
+  does not supply a product decision.
+- **Production enhancement/design-only:** not implemented or validated and not
+  part of the prototype's security claim.
+- **Unresolved requirement:** cannot be claimed complete without product-owner
+  clarification.
+
 The prototype demonstrates tamper evidence and layered access restrictions; it
 does not claim absolute tamper prevention or production readiness. Runtime
 database roles cannot update or delete audit evidence, but a sufficiently
@@ -44,8 +57,9 @@ access contract remain unresolved.
   keys, download tokens, original redacted values, and export contents.
 - Secret scanning covers the complete Git history. Any previously committed
   credential is revoked and rotated even if it was later removed.
-- Production deployment cannot activate `application-local.yml`; actuator
-  endpoints and internal routes are network restricted.
+- Before production exposure, deployment policy must prohibit
+  `application-local.yml` and restrict actuator and any future internal routes.
+  Those deployment controls are not supplied by this repository.
 
 ## Controls intentionally left as documentation
 
