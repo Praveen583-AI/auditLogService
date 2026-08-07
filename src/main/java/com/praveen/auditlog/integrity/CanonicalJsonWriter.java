@@ -111,7 +111,7 @@ final class CanonicalJsonWriter {
         for (int index = 0; index < value.length(); index++) {
             char current = value.charAt(index);
             switch (current) {
-                case '"' -> output.append("\\"");
+                case '"' -> output.append('\\').append('"');
                 case '\\' -> output.append("\\\\");
                 case '\b' -> output.append("\\b");
                 case '\f' -> output.append("\\f");
