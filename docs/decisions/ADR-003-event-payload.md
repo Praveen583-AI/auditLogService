@@ -78,7 +78,10 @@ The prototype indexes confirmed common filters in relational columns: chain and 
 
 **Costs and limitations**
 
-- The service must maintain a schema registry or equivalent versioned validators.
+- A production service supporting multiple producer schemas would need a schema
+  registry or equivalent versioned validators. The prototype stores an event
+  schema version and enforces structural limits; it does not implement a
+  producer-schema registry.
 - Canonicalization rules are part of the long-lived evidence contract and require regression fixtures.
 - Cross-event constraints inside arbitrary payloads remain weaker than normalized columns.
 - Frequently queried payload properties may later need deliberate promotion and backfill.
