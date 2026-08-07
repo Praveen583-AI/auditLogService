@@ -23,7 +23,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 @Service
-public final class AuditWriteService implements CreateAuditEventUseCase {
+public class AuditWriteService implements CreateAuditEventUseCase {
 
     private static final String OPERATION = "APPEND_AUDIT_EVENT";
     private static final Duration IDEMPOTENCY_RETENTION = Duration.ofHours(24);
