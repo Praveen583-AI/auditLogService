@@ -62,8 +62,8 @@ public final class ExportService {
             ExportManifest manifest=new ExportManifest(id,1,actor.tenantId(),selector.name(),selectorValue,snapshot,expires,
                     records.size(),boundaries,rc,pc,ac,CHECKSUM,"Ed25519",keyId,1,signature);
             ObjectNode bundle=json.createObjectNode(); bundle.put("format","audit-export-v1");
-            bundle.set("manifest",json.valueToTree(manifest)); bundle.set("records",json.valueToTree(records));
-            bundle.set("redactionProofs",json.valueToTree(proofs)); bundle.set("archiveManifests",json.valueToTree(archives));
+            bundle.set("manifest",portableJson(manifest)); bundle.set("records",portableJson(records));
+            bundle.set("redactionProofs",portableJson(proofs)); bundle.set("archiveManifests",portableJson(archives));
             bundle.put("verificationInstructions","Recompute each section SHA-256 checksum, then verify the Ed25519 manifest signature with the identified public key.");
             Path file=root.resolve(id+".json"); Files.write(file,canonical.serializeJson(bundle));
             byte[] token=new byte[32]; random.nextBytes(token); byte[] tokenHash=digest(token);
@@ -111,13 +111,14 @@ public final class ExportService {
     }
     private List<JsonNode> proofs(String tenant,List<JsonNode> records) {
         return records.stream().flatMap(e->redactions.records(tenant,UUID.fromString(e.get("event_id").asText())).stream())
-                .map(record -> (JsonNode) json.valueToTree(record)).toList();
+                .map(this::portableJson).toList();
     }
     private List<JsonNode> jsonRows(String sql,Object...args){return jdbc.query(sql,(r,n)->{try{return json.readTree(r.getString(1));}catch(Exception x){throw new IllegalStateException(x);}},args);}
-    private byte[] hash(Object value){return digest(canonical.serializeJson(json.valueToTree(value)));}
+    private byte[] hash(Object value){return digest(canonical.serializeJson(portableJson(value)));}
     private byte[] digest(byte[] value){try{return MessageDigest.getInstance(CHECKSUM).digest(value);}catch(Exception x){throw new IllegalStateException(x);}}
     private byte[] sign(byte[] value)throws Exception{Signature s=Signature.getInstance("Ed25519");s.initSign(privateKey);s.update(value);return s.sign();}
-    private byte[] manifestBytes(ExportManifest m){ObjectNode node=json.valueToTree(m);node.remove("signature");return canonical.serializeJson(node);}
+    private byte[] manifestBytes(ExportManifest m){ObjectNode node=(ObjectNode)portableJson(m);node.remove("signature");return canonical.serializeJson(node);}
+    private JsonNode portableJson(Object value){try{return json.readTree(json.writeValueAsBytes(value));}catch(Exception x){throw new IllegalStateException("Value cannot be represented as JSON",x);}}
     private void action(UUID id,ActorContext actor,String type,String outcome){jdbc.update("INSERT INTO export_access_action(action_id,export_id,tenant_id,actor_id,action_type,outcome,recorded_at) VALUES(?,?,?,?,?,?,?)",UUID.randomUUID(),id,actor.tenantId(),actor.actorId(),type,outcome,Timestamp.from(now()));}
     private Instant now(){return Instant.now(clock).truncatedTo(ChronoUnit.MICROS);}
     public enum SelectorType { ACTOR_ID, RESOURCE_ID }
