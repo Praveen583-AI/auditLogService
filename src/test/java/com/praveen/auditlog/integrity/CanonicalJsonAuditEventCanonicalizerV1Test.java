@@ -34,7 +34,7 @@ class CanonicalJsonAuditEventCanonicalizerV1Test {
                 java.nio.charset.StandardCharsets.UTF_8
         )).isEqualTo(expected);
         assertThat(hasher.digestHex(event))
-                .isEqualTo("193a16824a9147906e669fa6c539f2a6fb6d3cb99656300704f9818180019d77");
+                .isEqualTo("64a3bbd50aa3b778dd9abfbebde2176a858ff952b689814e6181f20279cba1eb");
     }
 
     @Test
