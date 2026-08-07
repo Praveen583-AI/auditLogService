@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
-import java.nio.charset.StandardCharsets;
+import java.io.IOException;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
@@ -43,7 +43,7 @@ public class CursorCodec {
                 throw new IllegalArgumentException("Unsupported cursor version");
             }
             return cursor;
-        } catch (IllegalArgumentException | JsonProcessingException error) {
+        } catch (IllegalArgumentException | IOException error) {
             throw new IllegalArgumentException("Invalid cursor", error);
         }
     }
