@@ -6,6 +6,8 @@ import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.transaction.TransactionSystemException;
 
 @Service
@@ -16,13 +18,24 @@ public class AuditWriteService implements CreateAuditEventUseCase {
 
     private final TransactionalAuditAppender appender;
     private final RetryPolicy retryPolicy;
+    private final OperationalMetrics metrics;
 
     public AuditWriteService(
             TransactionalAuditAppender appender,
             RetryPolicy retryPolicy
     ) {
+        this(appender, retryPolicy, new OperationalMetrics(new SimpleMeterRegistry()));
+    }
+
+    @Autowired
+    public AuditWriteService(
+            TransactionalAuditAppender appender,
+            RetryPolicy retryPolicy,
+            OperationalMetrics metrics
+    ) {
         this.appender = appender;
         this.retryPolicy = retryPolicy;
+        this.metrics = metrics;
     }
 
     @Override
@@ -30,7 +43,9 @@ public class AuditWriteService implements CreateAuditEventUseCase {
             String idempotencyKey,
             com.praveen.auditlog.api.dto.CreateAuditEventRequest request
     ) {
+        long operationStarted = metrics.start();
         for (int attempt = 1; attempt <= retryPolicy.maxAttempts(); attempt++) {
+            long attemptStarted = metrics.start();
             try {
                 CreateAuditEventResult result =
                         appender.append(idempotencyKey, request);
@@ -42,10 +57,13 @@ public class AuditWriteService implements CreateAuditEventUseCase {
                         result.response().sequenceNumber(),
                         result.replayed()
                 );
+                metrics.write(operationStarted, "SUCCESS", result.replayed());
                 return result;
             } catch (RuntimeException failure) {
                 if (isChainLockTimeout(failure)) {
+                    metrics.lockWait(attemptStarted, "TIMEOUT");
                     if (attempt == retryPolicy.maxAttempts()) {
+                        metrics.write(operationStarted, "CHAIN_BUSY", false);
                         throw new ChainBusyException(failure);
                     }
                     LOGGER.warn(
@@ -53,12 +71,15 @@ public class AuditWriteService implements CreateAuditEventUseCase {
                             OperationalLogContext.correlationId(), attempt,
                             retryPolicy.maxAttempts()
                     );
+                    metrics.retry("CHAIN_LOCK_TIMEOUT");
                     retryPolicy.backoff(attempt);
                     continue;
                 }
                 if (isConnectionFailure(failure)) {
+                    metrics.write(operationStarted, "DATABASE_FAILURE", false);
                     throw new TemporaryDatabaseFailureException(failure);
                 }
+                metrics.write(operationStarted, "FAILURE", false);
                 throw failure;
             }
         }

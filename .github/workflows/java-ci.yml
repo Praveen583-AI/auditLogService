@@ -34,6 +34,16 @@ jobs:
           done
       - name: Run clean tamper demonstration
         run: bash scripts/demo-tampering.sh
+      - name: Capture synthetic query-plan baseline
+        run: >-
+          mvn --batch-mode --no-transfer-progress
+          -Dtest=QueryPlanBaselineIntegrationTest test
+      - name: Upload query-plan baseline
+        uses: actions/upload-artifact@v4
+        with:
+          name: query-plan-baseline
+          path: target/performance-baseline/query-plans.txt
+          if-no-files-found: error
       - name: Report test failures
         if: failure()
         shell: bash

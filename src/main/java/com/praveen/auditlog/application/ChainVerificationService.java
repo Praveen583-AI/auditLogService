@@ -26,21 +26,25 @@ public class ChainVerificationService {
     private final ChainVerificationRepository repository;
     private final HashService hashes;
     private final CanonicalEventSerializer serializer;
+    private final OperationalMetrics metrics;
 
     public ChainVerificationService(
             AuditRequestContextProvider contextProvider,
             ChainVerificationRepository repository,
             HashService hashes,
-            CanonicalEventSerializer serializer
+            CanonicalEventSerializer serializer,
+            OperationalMetrics metrics
     ) {
         this.contextProvider = contextProvider;
         this.repository = repository;
         this.hashes = hashes;
         this.serializer = serializer;
+        this.metrics = metrics;
     }
 
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public VerificationResult verify(String chainId) {
+        long started = metrics.start();
         if (chainId == null || chainId.isBlank()) {
             throw new IllegalArgumentException("chainId is required");
         }
@@ -62,6 +66,7 @@ public class ChainVerificationService {
                     result.status(), result.failureReason(),
                     result.failureSequence(), result.verifiedCount()
             );
+            metrics.verification(started, result);
             return result;
         }
 
@@ -84,6 +89,7 @@ public class ChainVerificationService {
                     result.failureSequence(), result.verifiedCount()
             );
         }
+        metrics.verification(started, result);
         return result;
     }
 
