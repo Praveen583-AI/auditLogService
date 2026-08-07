@@ -42,21 +42,61 @@ public class AuditWriteService implements CreateAuditEventUseCase {
                         result.replayed()
                 );
                 return result;
-            } catch (CannotAcquireLockException lockTimeout) {
-                if (attempt == retryPolicy.maxAttempts()) {
-                    throw new ChainBusyException(lockTimeout);
+            } catch (RuntimeException failure) {
+                if (isChainLockTimeout(failure)) {
+                    if (attempt == retryPolicy.maxAttempts()) {
+                        throw new ChainBusyException(failure);
+                    }
+                    LOGGER.warn(
+                            "audit_append_retry correlationId={} reason=CHAIN_LOCK_TIMEOUT attempt={} maxAttempts={}",
+                            OperationalLogContext.correlationId(), attempt,
+                            retryPolicy.maxAttempts()
+                    );
+                    retryPolicy.backoff(attempt);
+                    continue;
                 }
-                LOGGER.warn(
-                        "audit_append_retry correlationId={} reason=CHAIN_LOCK_TIMEOUT attempt={} maxAttempts={}",
-                        OperationalLogContext.correlationId(), attempt,
-                        retryPolicy.maxAttempts()
-                );
-                retryPolicy.backoff(attempt);
-            } catch (DataAccessResourceFailureException
-                     | TransientDataAccessResourceException connectionFailure) {
-                throw new TemporaryDatabaseFailureException(connectionFailure);
+                if (isConnectionFailure(failure)) {
+                    throw new TemporaryDatabaseFailureException(failure);
+                }
+                throw failure;
             }
         }
         throw new IllegalStateException("Unreachable retry state");
     }
+
+    private boolean isChainLockTimeout(Throwable failure) {
+        return failure instanceof CannotAcquireLockException
+                || hasSqlState(failure, "55P03", false);
+    }
+
+    private boolean isConnectionFailure(Throwable failure) {
+        return failure instanceof DataAccessResourceFailureException
+                || failure instanceof TransientDataAccessResourceException
+                || hasSqlState(failure, "08", true);
+    }
+
+    private boolean hasSqlState(
+            Throwable failure,
+            String expected,
+            boolean prefix
+    ) {
+        Throwable current = failure;
+        for (int depth = 0; current != null && depth < 20; depth++) {
+            if (current instanceof java.sql.SQLException sqlException) {
+                java.sql.SQLException candidate = sqlException;
+                while (candidate != null) {
+                    String state = candidate.getSQLState();
+                    if (state != null && (prefix
+                            ? state.startsWith(expected)
+                            : state.equals(expected))) {
+                        return true;
+                    }
+                    candidate = candidate.getNextException();
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
 }
