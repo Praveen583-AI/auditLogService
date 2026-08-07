@@ -2,7 +2,11 @@
 
 ## Scope
 
-This document defines the confirmed prototype contract for appending one audit event. Search, verification, export, redaction, and retention endpoints remain design work until their selectors, authorization rules, and job behavior are confirmed.
+This document and the current OpenAPI file describe only the append contract.
+The application also implements public search and chain-verification
+controllers, but their complete schemas have not yet been added to this OpenAPI
+file. Retention, redaction, and export exist as application services without
+production controllers; their endpoint contracts remain design work.
 
 The OpenAPI source is [`openapi/audit-api.yaml`](../openapi/audit-api.yaml).
 

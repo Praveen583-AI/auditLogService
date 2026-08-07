@@ -39,7 +39,11 @@ The repeatable demonstration first verifies a legitimately archived range, then 
 
 ## Archives
 
-Verification of an archived range requires the immutable event object or range digest, manifest digest, sequence boundaries, boundary hashes, versions and archive identity. Legitimate archival is not tampering when the online boundary metadata and immutable manifest verify the movement.
+Prototype verification retrieves the local archive bundle and validates its
+checksum, signed insert-only manifest, sequence boundaries, boundary hashes,
+versions, and archive identity. This proves consistency with the stored
+manifest; it does not prove the local file was protected by an independent
+immutable store. Retention-locked archive storage is a production enhancement.
 
 ## Signed anchors
 

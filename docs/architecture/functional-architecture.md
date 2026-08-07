@@ -123,20 +123,24 @@ This boundary contains separate retention and structured-redaction operations wh
 
 #### Retention
 
-**Inputs:** Retention window, current time, record timestamp/state, and an explicit or scheduled retention trigger.
+**Implemented inputs:** An explicit tenant, chain, closed sequence range, and
+policy identifier. Retention-window calculation and scheduled triggering are
+design-only extensions.
 
 **Outputs:** Retention outcome and persisted evidence sufficient for verification.
 
 **Owned decisions:**
 
-- Archival or soft-deletion behavior selected for the prototype.
-- Eligibility and time-window calculation.
+- Contiguous archival behavior selected for the prototype.
+- Explicit-range eligibility. Time-window calculation is not implemented.
 - Evidence retained after the action.
 - Distinction between authorized retention and unauthorized removal.
 
 #### Structured Redaction
 
-**Inputs:** Target record and field, configured redactable fields, and documented authorization assumption.
+**Implemented inputs:** Target tenant/event, one JSON Pointer, policy, reason,
+and authenticated actor context. A configurable enterprise field catalogue and
+approval workflow are not implemented.
 
 **Outputs:** Privacy-safe representation, redaction outcome, and persisted verification evidence.
 
@@ -170,7 +174,8 @@ Lifecycle operations are not general update or delete operations.
 
 **Inputs:** Ordered records, integrity rules, genesis value, and persisted lifecycle evidence.
 
-**Outputs:** `intact` or `broken`; first inconsistent record; supported violation type.
+**Implemented outputs:** `VALID`, `INVALID`, or `INDETERMINATE`; first failing
+sequence where known; stable failure reason; and verified boundary/count data.
 
 **Owned decisions:**
 
@@ -184,6 +189,11 @@ Lifecycle operations are not general update or delete operations.
 Verification does not ask lifecycle modules to approve their own actions; it evaluates persisted evidence independently.
 
 ### Bulk Export
+
+Implemented as a synchronous application service for bounded prototype data;
+no production controller or worker is present. Redacted active records and
+archive manifests are included, but full archived bundle contents are not
+exported.
 
 **Inputs:** `actorId` or `resourceId`, selected records, permitted views, and integrity metadata.
 
@@ -211,6 +221,9 @@ Verification does not ask lifecycle modules to approve their own actions; it eva
 This may be an independently executable module or test utility, not a deployed service.
 
 ### Compliance Query
+
+This is a design boundary only. No confirmed compliance-population query or
+regulator report is implemented.
 
 **Inputs:** Clarified meanings of access and client account data, actors, resources, event types, reporting period, assumptions, and exclusions.
 

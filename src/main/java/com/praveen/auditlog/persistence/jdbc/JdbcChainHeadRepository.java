@@ -28,13 +28,14 @@ public class JdbcChainHeadRepository implements ChainHeadRepository {
                     chain_id, tenant_id, latest_sequence, latest_hash,
                     version, updated_at
                 ) VALUES (?, ?, 0, ?, 0, ?)
-                ON CONFLICT (chain_id) DO NOTHING
+                ON CONFLICT DO NOTHING
                 """, chainId, tenantId, genesisHash, Timestamp.from(initializedAt));
 
         return jdbc.queryForObject("""
                 SELECT chain_id, tenant_id, latest_sequence, latest_hash, version
                 FROM chain_head
                 WHERE chain_id = ?
+                  AND tenant_id = ?
                 FOR UPDATE
                 """, (row, ignored) -> new ChainHead(
                 row.getString("chain_id"),
@@ -42,7 +43,7 @@ public class JdbcChainHeadRepository implements ChainHeadRepository {
                 row.getLong("latest_sequence"),
                 row.getBytes("latest_hash"),
                 row.getLong("version")
-        ), chainId);
+        ), chainId, tenantId);
     }
 
     @Override

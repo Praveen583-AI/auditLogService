@@ -11,11 +11,16 @@ The service treats audit records as regulated evidence. Identity and tenant scop
 | Producer to `POST /v1/audit/events` | Event envelope, resource and payload | JWT authentication, `audit.write` authority, server-derived tenant/producer/actor, request validation, payload limits and idempotency |
 | Reader to `GET /v1/audit/events` | Filters, page size and cursor | JWT authentication, `audit.read` authority, server-applied tenant scope, bounded pagination and opaque cursor validation |
 | Auditor to chain verification | Chain identifier | JWT authentication, `audit.read` authority and tenant-scoped repository lookup |
-| Operator to `/internal/**` | Retention, redaction or export job parameters | Separate `audit.internal` workload authority, non-public routing and audit-of-audit record |
-| Administrator to `/admin/**` | Privileged policy or evidence requests | Separate `audit.admin` authority, explicit tenant scope and audit-of-audit record |
-| Application to database/archive | Integrity-protected records and manifests | Least-privilege credentials, transactions, append-only controls and encrypted transport |
+| Proposed operator route (`/internal/**`) | Retention, redaction or export job parameters | **Design-only route:** separate workload authority, non-public routing and action evidence |
+| Proposed administrator route (`/admin/**`) | Privileged policy or evidence requests | **Design-only route:** separate admin authority, explicit tenant scope and action evidence |
+| Application to database/archive | Integrity-protected records and manifests | Implemented database roles and transactions; archive uses local files. Encrypted transport and separate archive credentials are production controls. |
 
 A gateway identity header is trusted only if the gateway strips client copies, injects the value itself and the application cannot be reached by bypassing that gateway. The prototype uses verified JWT claims directly.
+
+Only event write, search, and chain verification have production controllers.
+Retention, redaction, and export are tested application services. The endpoint
+checklist below states the required boundary if controllers are added; it does
+not claim those lifecycle routes exist.
 
 ## Trusted identity context
 
@@ -36,9 +41,9 @@ Production requires these verified claims:
 | `POST /v1/audit/events` | JWT | `audit.write` | Context-derived tenant and chain | Existing payload limits; edge rate limit required | Correlation, event and chain IDs; never payload/token | Normal event receipt |
 | `GET /v1/audit/events` | JWT | `audit.read` | Tenant injected by query service | Page-size/cursor bounds; read rate limit required | Filters and cursor values must not be logged | Broad/sensitive searches recommended |
 | `GET /v1/audit/events/chains/{chainId}/verification` | JWT | `audit.read` | Repository requires tenant plus chain | Bound synchronous work; verification rate limit required | Result/reason/sequence only | Record regulator/admin verification in production |
-| Export request/status/download | JWT/workload identity | `audit.admin` or narrower export scope | Persist requester and tenant scope | Export-range and download limits | Never log artifact contents or signed URLs | Required for request, completion and download |
-| Retention execution | Workload identity | `audit.internal` | Policy and tenant constrained server-side | One bounded job scope | Policy/job IDs only | Required |
-| Redaction request/execution | Admin JWT/workload identity | `audit.admin` request; `audit.internal` execution | Tenant and target event verified | Field allowlist and bounded reason | Never log removed value | Required |
+| Export service operation (no controller) | Injected actor context in tests | Compliance/admin policy | Requester and tenant persisted | Bounded prototype selector; no API rate control | Never log artifact contents or tokens | Export access actions implemented |
+| Retention service operation (no controller) | Trusted internal caller assumption | Database maintenance role; controller authorization not implemented | Request carries tenant/chain; repository constrains range | One explicit range | Policy/manifest IDs only | Archive lifecycle actions implemented |
+| Redaction service operation (no controller) | Injected actor context in tests | Admin policy | Tenant and target event verified | JSON-pointer and reason validation | Never log removed value | Redaction record implemented |
 
 Rate limiting and network policy remain deployment controls for the prototype and must be enabled before public exposure.
 

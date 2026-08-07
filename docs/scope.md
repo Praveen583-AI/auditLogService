@@ -17,14 +17,14 @@ The two-to-three-day prototype must demonstrate the assignment's required behavi
 | Deterministic record order | Necessary to identify the immediately preceding record; the chosen rule must be documented. |
 | `GET /v1/audit/events/chains/{chainId}/verification` for intact and broken chains | Implemented Scenario A endpoint and validation mechanism. |
 | Direct data-store tampering demonstration | Explicitly prescribed validation sequence. |
-| Configurable retention window | Explicit Scenario B requirement. |
+| Explicit contiguous-range archival service | Implemented prototype retention mechanism. Automatic cutoff calculation from a configurable retention window remains unimplemented. |
 | One retention behavior: archival or soft deletion | The assignment permits either; implementing both is unnecessary in this timebox. |
 | Verification after legitimate retention | Explicit protection against false-positive chain breaks. |
 | Structured redaction of selected `payload` fields | Explicit Scenario B requirement. |
 | Verification after authorized redaction | Demonstrates that privacy handling does not destroy tamper-evidence. |
 | Bulk Export by `resourceId` and `actorId` | Explicit Scenario B requirement. |
 | Self-contained export verification and alteration detection | Explicit independent-verification requirement. |
-| Narrow, clarified Scenario C slice | Scenario C permits an implementation or well-reasoned partial implementation. |
+| Documented partial Scenario C boundary | Scenario C remains unclarified; the prototype records questions and reuses generic query/export building blocks without claiming a regulator report. |
 | Unit and integration tests, API/schema definitions, and runnable setup | Explicit engineering deliverables. |
 
 ## Design and Document Only
@@ -37,7 +37,7 @@ The two-to-three-day prototype must demonstrate the assignment's required behavi
 | Chain scope, concurrent ordering, and canonical hash representation | Required design assumptions are not prescribed by the assignment. |
 | Violation taxonomy beyond the implemented cases | The assignment requires a violation type but does not define a complete taxonomy. |
 | Retention mechanisms not selected for the prototype | The assignment does not require both archival and soft deletion. |
-| Physical deletion, legal hold, and regulatory-retention overrides | Material policy questions not defined by the source. |
+| Production legal-hold policy and regulatory-retention overrides | A simple append-only legal-hold mechanism is implemented; jurisdictional policy, approval, and override semantics remain unresolved. |
 | Enterprise redaction policy | Eligible fields, authorization, reversibility, and preservation obligations are unresolved. |
 | Export completeness, delivery, trust, and chain-of-custody rules | The assignment requires non-alteration verification but leaves these broader expectations open. |
 | Production security, deployment, recovery, and operating model | Document as limitations or future decisions; local end-to-end operation is the required deliverable. |

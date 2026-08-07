@@ -2,11 +2,14 @@
 
 ## Purpose
 
-Define what remains in PostgreSQL, what moves to an immutable archive store, and how the system verifies legitimate archival without treating it as tampering.
+Define what remains in PostgreSQL, what moves to archive storage, and how the
+system verifies legitimate archival without treating it as tampering. The
+prototype uses a create-only local-file adapter plus signed manifests; an
+externally immutable or retention-locked store is a production recommendation.
 
 ## Storage Responsibilities
 
-| PostgreSQL | Immutable archive store |
+| PostgreSQL | Archive bundle (local adapter in the prototype) |
 |---|---|
 | Active audit records | Complete archived records |
 | Current chain state | Original hash-covered event fields |
@@ -38,7 +41,9 @@ Each active record contains at least:
 - Predecessor hash.
 - Hash-algorithm identifier.
 - Canonicalization or record-format version.
-- Lifecycle visibility state where required by the chosen design.
+
+`AuditEvent` has no lifecycle status. Effective archival and redaction state is
+derived from separate manifests and action records.
 
 ### Chain State
 
@@ -73,9 +78,13 @@ Retain:
 - The public API exposes no general update or delete operation.
 - The application repository exposes append and read behavior, not generic save or delete behavior.
 - Runtime database roles lack `UPDATE`, `DELETE`, and `TRUNCATE` on base audit records.
-- The schema owner is a non-login role and is not used by the application.
+- The migrations create non-login runtime group roles. Separating table
+  ownership into a non-login migration role is a production deployment
+  requirement, not provisioned by this repository.
 - Required-field, hash-format, and unique chain-position constraints reject malformed records.
-- A blocking trigger may reject update/delete attempts as defense in depth.
+- A blocking update/delete trigger is an optional production defense; the
+  prototype relies on database grants and verification and does not install
+  such a trigger.
 
 These controls prevent ordinary or accidental mutation. A table owner or superuser may bypass privileges or disable a trigger.
 
@@ -89,11 +98,12 @@ These controls prevent ordinary or accidental mutation. A table owner or superus
 
 A hash chain detects modification only while at least one expected reference remains outside the attacker's rewrite boundary. An actor able to rewrite all records, chain state, and verification logic can evade internal-only verification.
 
-## Immutable Archive Contents
+## Archive Bundle Contents
 
-Each archive object contains a contiguous range and enough information for independent verification:
+The implemented `ArchiveBundle` contains a bundle format version and an ordered
+list of archived events. Each entry contains the canonical event fields and its
+stored content hash. Together these provide:
 
-- Archive manifest version.
 - Chain identifier.
 - First and last sequence.
 - Record count.
@@ -105,7 +115,10 @@ Each archive object contains a contiguous range and enough information for indep
 - Content hashes and predecessor hashes.
 - Hash-algorithm identifier.
 - Canonicalization or record-format version.
-- Object-level digest.
+
+The object-level checksum, range boundaries, policy, storage locator, and
+signature metadata are stored in the separate online `ArchiveManifest`, not
+duplicated inside the bundle.
 
 If protected original values remain in the archive after redaction, access to those values requires a separately documented privacy and authorization decision.
 
@@ -117,19 +130,17 @@ If protected original values remain in the archive after redaction, access to th
 | Chain identifier | Identifies the affected chain |
 | First and last sequence | Defines the exact gap represented by the archive |
 | Record count | Detects an incomplete range |
-| First and last record identifiers | Preserves stable range boundaries |
 | Predecessor hash | Anchors the first archived record to the preceding range |
-| Terminal hash | Commits to the final verified state of the archived range |
-| Hash-algorithm identifier | Selects the correct integrity calculation |
-| Canonicalization or format version | Reconstructs the original hash input |
+| First and last event hashes | Commits to both ends of the archived range |
+| Bundle/checksum format versions | Selects the correct bundle verification rules |
 | Archive object identifier | Locates the archived evidence |
 | Archive object digest | Detects byte-level alteration or object replacement |
-| Lifecycle status | Distinguishes preparing, completed, failed, or restored movement |
 | Archived timestamp | Records when movement occurred |
 | Retention-policy identifier/version | Explains why movement was legitimate |
-| Archive action identifier | Correlates the range with lifecycle evidence |
+| Signature algorithm, key ID, version, time, and value | Authenticates the manifest under the configured prototype key |
 
-The first and last record identifiers are included for clear diagnostics even where sequence boundaries are sufficient for calculation.
+Preparation and failure state is represented by separate append-only
+`archive_lifecycle_action` rows; the manifest itself has no lifecycle status.
 
 ## Boundary Verification
 
@@ -157,6 +168,9 @@ online record 2001
 ## Verification Modes
 
 ### Online Continuity Verification
+
+This is a design option, not a separate implemented mode. The prototype verifier
+retrieves and verifies archive bundles when it crosses archived ranges.
 
 Without fetching archive contents, the verifier can establish that:
 
@@ -188,7 +202,9 @@ Only this process supports a claim that the archived range itself was fully reve
 2. Record a preparing lifecycle action.
 3. Read the records in authoritative order.
 4. Construct the self-contained archive object.
-5. Write it to the immutable archive store.
+5. Write it through the configured archive adapter. The prototype adapter uses
+   create-only local files; production should use independently protected,
+   retention-locked storage.
 6. Confirm the stored object and its digest.
 7. Recompute and verify the archived range.
 8. Atomically create the completed online manifest and mark the range archived.

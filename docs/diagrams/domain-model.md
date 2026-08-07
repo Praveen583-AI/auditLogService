@@ -122,10 +122,10 @@ flowchart LR
     Event --> Query["Search and reporting"]
     Event --> Verify["Chain verification"]
     Archive["Completed ArchiveManifest"] --> Verify
-    Verify --> Result["Immutable VerificationResult"]
+    Verify --> Result["VerificationResult response (not persisted)"]
 
     Event --> ArchiveProcess["Archive operation"]
-    ArchiveProcess --> ArchiveObject["Immutable archive object"]
+    ArchiveProcess --> ArchiveObject["Archive bundle (local prototype adapter)"]
     ArchiveObject --> Archive
 
     Event --> View["Authorized event view"]

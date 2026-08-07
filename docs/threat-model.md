@@ -25,7 +25,7 @@ controls. Implemented status is summarized in `security-review.md`.
 | Producer to public API | Spoofed tenant/actor, oversized or malicious payload | Verified identity context, authorization and bounded validation | Rejected-request metrics and sanitized logs |
 | Application runtime | Bug or compromised runtime attempts event mutation | `audit_app` cannot update/delete `audit_event` | Database permission error and operational alert |
 | Database administrator | Direct row modification, deletion or chain-head rewrite | Separate privileged access and accountable operations | Streaming chain verification and external anchors |
-| Retention worker | Deletes before archive is durable or exceeds policy scope | Separate `audit_maintenance` role and approved job scope | Archive manifest, audit-of-audit record and boundary verification |
+| Retention service / future worker | Deletes before archive is durable or exceeds policy scope | Implemented maintenance role and range validation; production worker authorization is future | Archive manifest, lifecycle action record and boundary verification |
 | Archive operator | Replaces or removes archived ranges | Immutable/retention-locked objects and separate access control | Manifest digest, online boundary metadata and external anchor |
 | Log/monitoring operator | Learns regulated payload or identity data | Logging allowlist and centralized sanitization | Log scanning and access review |
 | Signing-key operator | Signs a rewritten chain history | KMS-controlled non-exportable key and separated authorization | Independent anchor store and key-use audit |

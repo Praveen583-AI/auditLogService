@@ -35,6 +35,12 @@ Hash values are returned where the API contract requires an integrity receipt, b
 
 ## Audit-of-audit actions
 
-Verification, export, archive, retention, redaction, privileged database maintenance and regulator evidence access produce separate audit events containing the requester/workload identity, approved scope, action, result and correlation ID. These records never contain the exported or redacted payload itself.
+The prototype persists append-only archive lifecycle actions, legal-hold
+actions, redaction records, and export access actions. Verification produces a
+sanitized operational log and response but no persistent verification-history
+record. Privileged database maintenance and regulator evidence access do not
+have implemented application workflows. Persisting those activities as
+audit-of-audit events is a production recommendation. No action record should
+contain exported or redacted payload values.
 
 Log access is restricted and reviewed. Retention for operational logs is independent from regulated audit-event retention.
