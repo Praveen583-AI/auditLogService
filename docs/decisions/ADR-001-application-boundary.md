@@ -7,7 +7,12 @@
 
 ## Context
 
-The assignment requires a working audit-log prototype in two to three days. The prototype must demonstrate append-only writes, required queries, hash-chain verification, direct tampering detection, retention, structured redaction, independently verifiable export, and a clarified compliance-reporting slice.
+The assignment requires a working audit-log prototype in two to three days. The
+prototype must demonstrate append-only writes, required queries, hash-chain
+verification, direct tampering detection, retention, structured redaction, and
+independently verifiable export. Scenario C remains a documented partial slice:
+generic events and exports are reusable building blocks, but no confirmed
+compliance population or regulator-facing report is implemented.
 
 The write path must select one authoritative predecessor, construct integrity metadata, and persist the completed record before returning success. Retention and redaction must remain consistent with verification, query visibility, and export behavior.
 
