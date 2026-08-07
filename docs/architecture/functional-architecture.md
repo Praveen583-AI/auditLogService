@@ -119,4 +119,157 @@ The repository does not decide retention eligibility, redaction authorization, q
 
 ### Audit Record Lifecycle
 
-This boundary contains separate retention and structured-redaction operations while sharing l×Ï7ÒÚ$z{-®éÜj×'&VÆF–öâÔ–B"Â4õ%$TÄD”ôåô”B¢æ6öçFVçEG—R„ÖVF–G—RäÄ”4D”ôåô¥4ôâ¢æ6öçFVçB‚"" ¢°¢&WfVçEG—R#¢&–çfÆ–BG—R"À¢&WfVçE66†VÖfW'6–öâ#¢À¢'–ÆöB#¢·Ğ¢Ğ¢"""’¢ææDW‡V7B‡7FGW2‚’æ—4&E&WVW7B‚’¢ææDW‡V7B††VFW"‚’ç7G&–ær‚%‚Ô6÷'&VÆF–öâÔ–B"Â4õ%$TÄD”ôåô”B’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"’çfÇVR‚$”ådÄ”Eõ$UTU5B"’¢ææDW‡V7B†§6öåF‚‚"Bæ6÷'&VÆF–öä–B"’çfÇVR„4õ%$TÄD”ôåô”B’¢ææDW‡V7B†§6öåF‚‚"Bçf–öÆF–öç2"Â†56—¦RƒR’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚&¦¶'FçfÆ–FF–öâ"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'&V¦V7FVEfÇVR"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'7F6µG&6R"’’’“°¢Ğ ¢FW7@¢fö–B6öæfÆ–7F–æt–FV×÷FVæ7”¶W•&WGW&ç3C•v—F†÷WD÷&–v–æÄFF€¢6GW&VD÷WGWB÷WGW@¢’F‡&÷w2W†6WF–öâ°¢v—fVâ†7&VFTVF—DWfVçBæ7&VFR†W„”DTÕõDTä5•ô´U’’Âç’‚’’¢çv–ÆÅF‡&÷r†æWr–FV×÷FVæ7”¶W•&WW6VDW†6WF–öâ‚’“° ¢Öö6´×f2çW&f÷&Ò‡fÆ–E&WVW7B‚'6V7&WBÖ66÷VçB×fÇVR"’¢ææDW‡V7B‡7FGW2‚’æ—46öæfÆ–7B‚’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"’çfÇVR‚$”DTÕõDTä5•ô´U•õ$UU4TB"’¢ææDW‡V7B†§6öåF‚‚"Bæ6÷'&VÆF–öä–B"’çfÇVR„4õ%$TÄD”ôåô”B’¢ææDW‡V7B†§6öåF‚‚"Bçf–öÆF–öç2"Â†56—¦Rƒ’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'6V7&WBÖ66÷VçB×fÇVR"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚&f–ævW'&–çB"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'7F6µG&6R"’’’“° ¢76W'EF†B†÷WGWB’æ6öçF–ç2‚$”DTÕõDTä5•ô´U•õ$UU4TB"¢æ6öçF–ç2„4õ%$TÄD”ôåô”B¢æFöW4æ÷D6öçF–â‚'6V7&WBÖ66÷VçB×fÇVR"¢æFöW4æ÷D6öçF–â‚&f–ævW'&–çB"¢æFöW4æ÷D6öçF–â‚'7F6µG&6R"“°¢Ğ ¢FW7@¢fö–B÷fW'6—¦VE–ÆöE&WGW&ç3C5v—F†÷WDV6†ö–æu–ÆöB€¢6GW&VD÷WGWB÷WGW@¢’F‡&÷w2W†6WF–öâ°¢v—fVâ†7&VFTVF—DWfVçBæ7&VFR†W„”DTÕõDTä5•ô´U’’Âç’‚’’¢çv–ÆÅF‡&÷r†æWr–ÆöEFöôÆ&vTW†6WF–öâ‚’“° ¢Öö6´×f2çW&f÷&Ò‡fÆ–E&WVW7B‚'6Vç6—F—fR×–ÆöBÖÖ&¶W""’¢ææDW‡V7B‡7FGW2‚’æ—5–ÆöEFöôÆ&vR‚’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"’çfÇVR‚%”ÄôEôÄ”Ô•EôU„4TTDTB"’¢ææDW‡V7B†§6öåF‚‚"BæÖW76vR"’çfÇVR‚%F†R&WVW7BW†6VVG2F†RW&Ö—GFVB6—¦Râ"’¢ææDW‡V7B†§6öåF‚‚"Bæ6÷'&VÆF–öä–B"’çfÇVR„4õ%$TÄD”ôåô”B’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'6Vç6—F—fR×–ÆöBÖÖ&¶W""’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚%–ÆöEFöôÆ&vTW†6WF–öâ"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'7F6µG&6R"’’’“° ¢76W'EF†B†÷WGWB’æ6öçF–ç2‚%”ÄôEôÄ”Ô•EôU„4TTDTB"¢æ6öçF–ç2„4õ%$TÄD”ôåô”B¢æFöW4æ÷D6öçF–â‚'6Vç6—F—fR×–ÆöBÖÖ&¶W""¢æFöW4æ÷D6öçF–â‚%–ÆöEFöôÆ&vTW†6WF–öâ"¢æFöW4æ÷D6öçF–â‚'7F6µG&6R"“°¢Ğ ¢FW7@¢fö–BVæW‡V7FVDf–ÇW&U&WGW&ç4f—†VCSv—F†÷WDW†6WF–öäFWF–Ç2€¢6GW&VD÷WGWB÷WGW@¢’F‡&÷w2W†6WF–öâ°¢v—fVâ†7&VFTVF—DWfVçBæ7&VFR†W„”DTÕõDTä5•ô´U’’Âç’‚’’¢çv–ÆÅF‡&÷r†æWr'VçF–ÖTW†6WF–öâ€¢&f—‡GW&R×6Vç6—F—fRÖFF&6RÖFWF–Â"’“° ¢Öö6´×f2çW&f÷&Ò‡fÆ–E&WVW7B‚'6Vç6—F—fR×–ÆöBÖÖ&¶W""’¢ææDW‡V7B‡7FGW2‚’æ—4–çFW&æÅ6W'fW$W'&÷"‚’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"’çfÇVR‚$”åDU$äÅôU%$õ""’¢ææDW‡V7B†§6öåF‚‚"BæÖW76vR"’çfÇVR‚%F†R&WVW7B6÷VÆBæ÷B&R6ö×ÆWFVBâ"’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚&f—‡GW&R×6Vç6—F—fRÖFF&6RÖFWF–Â"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'6VÆV7B¢"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚%'VçF–ÖTW†6WF–öâ"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'7F6µG&6R"’’’“° ¢76W'EF†B†÷WGWB’æ6öçF–ç2‚$”åDU$äÅôU%$õ""¢æ6öçF–ç2„4õ%$TÄD”ôåô”B¢æFöW4æ÷D6öçF–â‚&f—‡GW&R×6Vç6—F—fRÖFF&6RÖFWF–Â"¢æFöW4æ÷D6öçF–â‚'6VÆV7B¢"¢æFöW4æ÷D6öçF–â‚%'VçF–ÖTW†6WF–öâ"¢æFöW4æ÷D6öçF–â‚'7F6µG&6R"“°¢Ğ ¢FW7@¢fö–B6ö×ÆWFVD–çfÆ–EfW&–f–6F–öå&WGW&ç3#v—F…&V6öâ‚’F‡&÷w2W†6WF–öâ°¢v—fVâ†6†–åfW&–f–6F–öâçfW&–g’‚'FVæçC§FVæçBÓ"’’çv–ÆÅ&WGW&â€¢fW&–f–6F–öå&W7VÇBæ–çfÆ–B€¢fW&–f–6F–öå&W7VÇBäf–ÇW&U&V6öâä4ôåDTåEô„4…ôÔ•4ÔD4‚À¢"ÂÂÂÂÂÀ¢%F†R7F÷&VB6öçFVçB†6‚FöW2æ÷BÖF6‚F†R&V6Æ7VÆFVB†6‚â ¢¢“° ¢Öö6´×f2çW&f÷&Ò†vWB€¢D‚²"ö6†–ç2÷FVæçC§FVæçBÓ÷fW&–f–6F–öâ ¢’¢ææDW‡V7B‡7FGW2‚’æ—4ö²‚’¢ææDW‡V7B†§6öåF‚‚"Bç7FGW2"’çfÇVR‚$”ådÄ”B"’¢ææDW‡V7B†§6öåF‚‚"BçfÆ–B"’çfÇVR†fÇ6R’¢ææDW‡V7B†§6öåF‚‚"Bæf–ÇW&U&V6öâ"¢çfÇVR‚$4ôåDTåEô„4…ôÔ•4ÔD4‚"’¢ææDW‡V7B†§6öåF‚‚"Bæf–ÇW&U6WVVæ6R"’çfÇVRƒ"’“°¢Ğ ¢FW7@¢fö–BÖÆf÷&ÖVD7W'6÷%&WGW&ç3Cv—F†÷WDÆövv–æt7W'6÷"€¢6GW&VD÷WGWB÷WGW@¢’F‡&÷w2W†6WF–öâ°¢7G&–ær&t7W'6÷"Ò'6Vç6—F—fRÖ–çfÆ–BÖ7W'6÷"#°¢v—fVâ†6öçFW‡E&÷f–FW"æ7W'&VçD6öçFW‡B‚’’çv–ÆÅ&WGW&â€¢æWrVF—E&WVW7D6öçFW‡B€¢'FVæçBÓ"Â'&öGV6W"Ó"Â&7F÷"Ó"À¢%U4U""Â$UD„TåD”4DTEõ$”ä4•Â ¢¢“°¢v—fVâ†VF—EVW'’ç6V&6‚€¢W‚'FVæçBÓ"’À¢ç’„VF—DWfVçE7V6–f–6F–öâæ6Æ72’À¢WƒS’À¢W‡&t7W'6÷"¢’’çv–ÆÅF‡&÷r†æWr–çfÆ–D7W'6÷$W†6WF–öâ€¢–çfÆ–D7W'6÷$W†6WF–öâå&V6öâäÔÄdõ$ÔT@¢’“° ¢Öö6´×f2çW&f÷&Ò†vWB…D‚¢ç&Ò‚&7W'6÷""Â&t7W'6÷"¢æ†VFW"‚%‚Ô6÷'&VÆF–öâÔ–B"Â4õ%$TÄD”ôåô”B’¢ææDW‡V7B‡7FGW2‚’æ—4&E&WVW7B‚’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"’çfÇVR‚$5U%4õ%ôÔÄdõ$ÔTB"’¢ææDW‡V7B†§6öåF‚‚"Bæ6÷'&VÆF–öä–B"’çfÇVR„4õ%$TÄD”ôåô”B’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‡&t7W'6÷"’’’“° ¢76W'EF†B†÷WGWB’æ6öçF–ç2‚$5U%4õ%ôÔÄdõ$ÔTB"¢æ6öçF–ç2„4õ%$TÄD”ôåô”B¢æFöW4æ÷D6öçF–â‡&t7W'6÷"“°¢Ğ ¢FW7@¢fö–BW††W7FVD6†–äÆö6µ&WGW&ç3S5v—F…&WG'”gFW"€¢6GW&VD÷WGWB÷WGW@¢’F‡&÷w2W†6WF–öâ°¢v—fVâ†7&VFTVF—DWfVçBæ7&VFR†W„”DTÕõDTä5•ô´U’’Âç’‚’’¢çv–ÆÅF‡&÷r†æWr6†–ä'W7”W†6WF–öâ€¢æWr'VçF–ÖTW†6WF–öâ‚'6Vç6—F—fRÆö6²FWF–Â"¢’“° ¢Öö6´×f2çW&f÷&Ò‡fÆ–E&WVW7B‚'6Vç6—F—fR×–ÆöBÖÖ&¶W""’¢ææDW‡V7B‡7FGW2‚’æ—56W'f–6UVæf–Æ&ÆR‚’¢ææDW‡V7B††VFW"‚’ç7G&–ær‚%&WG'’ÔgFW""Â#"’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"’çfÇVR‚$4„”åô%U5’"’¢ææDW‡V7B†§6öåF‚‚"Bæ6÷'&VÆF–öä–B"’çfÇVR„4õ%$TÄD”ôåô”B’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B€¢6öçF–ç57G&–ær‚'6Vç6—F—fRÆö6²FWF–Â"¢’’“° ¢76W'EF†B†÷WGWB’æ6öçF–ç2‚$4„”åô%U5’"¢æ6öçF–ç2„4õ%$TÄD”ôåô”B¢æFöW4æ÷D6öçF–â‚'6Vç6—F—fRÆö6²FWF–Â"¢æFöW4æ÷D6öçF–â‚'6Vç6—F—fR×–ÆöBÖÖ&¶W""“°¢Ğ ¢FW7@¢fö–BG&ç6–VçD6öææV7F–öäf–ÇW&U&WGW&ç56æ—F—¦VCS2€¢6GW&VD÷WGWB÷WGW@¢’F‡&÷w2W†6WF–öâ°¢v—fVâ†7&VFTVF—DWfVçBæ7&VFR†W„”DTÕõDTä5•ô´U’’Âç’‚’’¢çv–ÆÅF‡&÷r†æWrFV×÷&'”FF&6Tf–ÇW&TW†6WF–öâ€¢æWr'VçF–ÖTW†6WF–öâ€¢&f—‡GW&R×6Vç6—F—fRÖ6öææV7F–öâÖFWF–Â ¢¢’“° ¢Öö6´×f2çW&f÷&Ò‡fÆ–E&WVW7B‚'–ÆöB×fÇVR"’¢ææDW‡V7B‡7FGW2‚’æ—56W'f–6UVæf–Æ&ÆR‚’¢ææDW‡V7B†§6öåF‚‚"Bæ6öFR"¢çfÇVR‚%DTÕõ$%•ôDD$4Uôd”ÅU$R"’¢ææDW‡V7B†§6öåF‚‚"Bæ6÷'&VÆF–öä–B"’çfÇVR„4õ%$TÄD”ôåô”B’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚&F"×6V7&WB"’’’¢ææDW‡V7B†6öçFVçB‚’ç7G&–ær†æ÷B†6öçF–ç57G&–ær‚'–ÆöB×fÇVR"’’’“° ¢76W'EF†B†÷WGWB’æ6öçF–ç2‚%DTÕõ$%•ôDD$4Uôd”ÅU$R"¢æ6öçF–ç2„4õ%$TÄD”ôåô”B¢æFöW4æ÷D6öçF–â‚&F"×6V7&WB"¢æFöW4æ÷D6öçF–â‚&f—‡GW&R×6Vç6—F—fRÖ6öææV7F–öâÖFWF–Â"¢æFöW4æ÷D6öçF–â‚'–ÆöB×fÇVR"“°¢Ğ ¢FW7@¢fö–B7V66W76gVÄ7&VFU&WGW&ç4GW&&ÆU&V6V—B‚’F‡&÷w2W†6WF–öâ°¢UT”BWfVçD–BÒUT”Bæg&öÕ7G&–ær‚#ÓÓÓÓ"“°¢VF—DWfVçE&W7öç6R&W7öç6RÒæWrVF—DWfVçE&W7öç6R€¢WfVçD–BÀ¢'FVæçC§FVæçBÓ"À¢À¢–ç7FçBç'6R‚###bÓ‚ÓuCC£3£"ãCSe¢"’À¢&"ç&WVBƒcB’À¢%4„Ó#Sb"À¢¢“°¢v—fVâ†7&VFTVF—DWfVçBæ7&VFR†W„”DTÕõDTä5•ô´U’’Âç’‚’’¢çv–ÆÅ&WGW&â†æWr7&VFTVF—DWfVçE&W7VÇB‡&W7öç6RÂfÇ6R’“° ¢Öö6´×f2çW&f÷&Ò‡fÆ–E&WVW7B‚&66÷VçBÓ"’¢ææDW‡V7B‡7FGW2‚’æ—47&VFVB‚’¢ææDW‡V7B††VFW"‚’ç7G&–ær€¢$Æö6F–öâ"À¢"÷cöVF—BöWfVçG2ò"²WfVçD–@¢’¢ææDW‡V7B††VFW"‚’ç7G&–ær‚$–FV×÷FVæ7’Õ&WÆ–VB"Â&fÇ6R"’¢ææDW‡V7B†§6öåF‚‚"BæWfVçD–B"’çfÇVR†WfVçD–BçFõ7G&–ær‚’’¢ææDW‡V7B†§6öåF‚‚"Bç6WVVæ6TçVÖ&W""’çfÇVRƒ’“°¢Ğ ¢&—fFR÷&rç7&–ævg&ÖWv÷&²çFW7BçvV"ç6W'fÆWBç&WVW7BäÖö6´‡GG6W'fÆWE&WVW7D'V–ÆFW ¢fÆ–E&WVW7B…7G&–ær&W6÷W&6T–B’°¢&WGW&â÷7B…D‚¢æ†VFW"‚$–FV×÷FVæ7’Ô¶W’"Â”DTÕõDTä5•ô´U’¢æ†VFW"‚%‚Ô6÷'&VÆF–öâÔ–B"Â4õ%$TÄD”ôåô”B¢æ6öçFVçEG—R„ÖVF–G—RäÄ”4D”ôåô¥4ôâ¢æ6öçFVçB‚"" ¢°¢&WfVçEG—R#¢$44õTåEõUDDTB"À¢&WfVçE66†VÖfW'6–öâ#¢À¢&ö67W'&VDB#¢###bÓ‚ÓuCC£3£"ã#5¢"À¢&7F÷"#¢°¢&–B#¢&V×Æ÷–VRÓC""À¢'G—R#¢%U4U" ¢ÒÀ¢'&W6÷W&6R#¢°¢'G—R#¢$44õTåB"À¢&–B#¢"W2 ¢ÒÀ¢'–ÆöB#¢°¢&6†ævVDf–VÆG2#¢²&FG&W72%Ğ¢Ğ¢Ğ¢"""æf÷&ÖGFVB‡&W6÷W&6T–B’“°¢Ğ§Ğ 
+This boundary contains separate retention and structured-redaction operations while sharing lifecycle-evidence conventions.
+
+#### Retention
+
+**Inputs:** Retention window, current time, record timestamp/state, and an explicit or scheduled retention trigger.
+
+**Outputs:** Retention outcome and persisted evidence sufficient for verification.
+
+**Owned decisions:**
+
+- Archival or soft-deletion behavior selected for the prototype.
+- Eligibility and time-window calculation.
+- Evidence retained after the action.
+- Distinction between authorized retention and unauthorized removal.
+
+#### Structured Redaction
+
+**Inputs:** Target record and field, configured redactable fields, and documented authorization assumption.
+
+**Outputs:** Privacy-safe representation, redaction outcome, and persisted verification evidence.
+
+**Owned decisions:**
+
+- Eligible fields.
+- Redaction representation.
+- Metadata retained about the action.
+- Whether an original value remains recoverable.
+- What normal retrieval and export may disclose.
+
+**Shared dependencies:** Audit Repository, Record View Policy, and Integrity Rules.
+
+Lifecycle operations are not general update or delete operations.
+
+### Record View Policy
+
+**Inputs:** Stored record, retention state, redaction state, and intended use: normal query, compliance result, or export.
+
+**Outputs:** Permitted representation for that use.
+
+**Owned decisions:**
+
+- Visibility of retained records.
+- Visibility of redacted values.
+- Consistent representation across query, compliance, and export.
+
+**Dependencies:** Persisted lifecycle evidence and documented policy assumptions.
+
+### Chain Verification
+
+**Inputs:** Ordered records, integrity rules, genesis value, and persisted lifecycle evidence.
+
+**Outputs:** `intact` or `broken`; first inconsistent record; supported violation type.
+
+**Owned decisions:**
+
+- Verification traversal.
+- First-inconsistency selection.
+- Violation classification.
+- Independent evaluation of retention and redaction evidence.
+
+**Dependencies:** Audit Repository and Integrity Rules.
+
+Verification does not ask lifecycle modules to approve their own actions; it evaluates persisted evidence independently.
+
+### Bulk Export
+
+**Inputs:** `actorId` or `resourceId`, selected records, permitted views, and integrity metadata.
+
+**Outputs:** Self-contained bundle, manifest, and independently verifiable proof data.
+
+**Owned decisions:**
+
+- Bundle contract and included metadata.
+- Treatment of retained and redacted records.
+- Proof semantics for a filtered record set.
+- Meaning of â€œnot altered since export.â€
+
+**Dependencies:** Audit Query, Record View Policy, Integrity Rules, and Export Verification contract.
+
+### Export Verification
+
+**Inputs:** Export bundle and manifest.
+
+**Outputs:** Valid or invalid result and, where supported, the failed record or proof.
+
+**Owned decisions:** Deterministic bundle-validation procedure and supported failure reporting.
+
+**Dependencies:** The shared bundle contract and Integrity Rules.
+
+This may be an independently executable module or test utility, not a deployed service.
+
+### Compliance Query
+
+**Inputs:** Clarified meanings of access and client account data, actors, resources, event types, reporting period, assumptions, and exclusions.
+
+**Outputs:** Scoped compliance result with traceability to underlying audit records.
+
+**Owned decisions:**
+
+- Which events qualify.
+- Required output fields.
+- Reporting population.
+- Implemented scope and exclusions.
+
+**Dependencies:** Audit Query and Record View Policy.
+
+It reuses normal query behavior rather than becoming a second query engine.
+
+## Synchronization Boundaries
+
+### Synchronous
+
+- Event validation, predecessor selection, hash construction, atomic persistence, and write acknowledgement.
+- Query and pagination.
+- Chain verification. The assignment names `GET /audit/verify`; the implemented
+  versioned route is `GET /v1/audit/events/chains/{chainId}/verification`.
+- Structured redaction for the prototype.
+- Narrow compliance query.
+- Bulk Export for the prototype dataset.
+
+A successful response must not precede completion of the claimed business effect.
+
+### May Be Asynchronous
+
+- Retention processing, provided eligibility, progress, completion, and post-retention verification remain observable.
+- Production-scale export generation, if a job-status contract is added.
+- Scheduled integrity verification as an optional supplement.
+- Archival transfer after required verification evidence is safely persisted.
+
+The prototype may keep these operations synchronous to avoid unnecessary transition states.
+
+### Must Not Be Eventually Reconciled
+
+- Authoritative predecessor selection.
+- Integrity metadata for an acknowledged write.
+- Persistence of an acknowledged event.
+- Removal of sensitive data after reporting redaction success.
+- Lifecycle evidence after the corresponding record has already been removed.
+- Export delivery before its manifest and proof metadata are complete.
+
+## Dependency Sequence
+
+1. Define identity, ordering, timestamp, hash inputs, genesis value, and chain scope.
+2. Establish record and lifecycle-evidence contracts.
+3. Implement atomic append and Integrity Rules.
+4. Implement query and base verification.
+5. Add retention and extend independent verification.
+6. Add redaction, Record View Policy, and verification behavior.
+7. Add export and independent bundle verification.
+8. Add the clarified Scenario C compliance slice.
+
+## Scope Note
+
+Microservices, event streaming, a separate search platform, blockchain, multi-region deployment, and a custom UI are outside the prototype scope. See [ADR-001](../decisions/ADR-001-application-boundary.md).
