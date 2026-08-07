@@ -26,9 +26,16 @@ The synchronous prototype stops at the first inconsistency and returns HTTP 200 
 - `CHAIN_HEAD_MISMATCH`
 - `UNSUPPORTED_CANONICALIZATION_VERSION`
 - `UNSUPPORTED_HASH_ALGORITHM`
-- `MISSING_ARCHIVE_PROOF` when archive verification is implemented
+- `MISSING_ARCHIVE_PROOF`
+- `ARCHIVE_CHECKSUM_MISMATCH`
+- `ARCHIVE_SIGNATURE_INVALID`
+- `ARCHIVE_RANGE_INVALID`
+- `ARCHIVE_CHAIN_INVALID`
+- `ARCHIVE_BOUNDARY_MISMATCH`
 
 Direct database tamper tests cover payload modification, deletion and reordering and assert the first invalid sequence. Runtime-role tests separately prove that the normal application role cannot update or delete an event.
+
+The repeatable demonstration first verifies a legitimately archived range, then proves that direct payload modification produces `CONTENT_HASH_MISMATCH` and deletion produces `SEQUENCE_GAP`. Run it with `bash scripts/demo-tampering.sh`; the fixture truncates PostgreSQL state before each test and removes its temporary archive directory after the suite.
 
 ## Archives
 

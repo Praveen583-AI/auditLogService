@@ -6,6 +6,7 @@ import com.praveen.auditlog.api.dto.ActorDto;
 import com.praveen.auditlog.api.dto.CreateAuditEventRequest;
 import com.praveen.auditlog.api.dto.ResourceDto;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.boot.test.system.CapturedOutput;
@@ -28,6 +29,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 
 import com.praveen.auditlog.retention.ArchiveManifest;
 import com.praveen.auditlog.retention.FileArchiveStore;
@@ -40,7 +42,7 @@ import static org.mockito.BDDMockito.given;
 @Testcontainers
 @ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
-class ChainVerificationIntegrationTest {
+abstract class ChainVerificationIntegrationTest {
 
     private static final String CHAIN_ID = "tenant:verification-tenant";
     private static final Path ARCHIVE_DIRECTORY = archiveDirectory();
@@ -100,6 +102,50 @@ class ChainVerificationIntegrationTest {
         for (int index = 1; index <= 3; index++) {
             writes.create("verification-" + index, request(index));
         }
+    }
+
+    @AfterAll
+    static void removeArchiveFixtures() throws Exception {
+        if (!Files.exists(ARCHIVE_DIRECTORY)) return;
+        try (var paths = Files.walk(ARCHIVE_DIRECTORY)) {
+            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+        }
+    }
+
+    @Test
+    void repeatableArchiveAndUnauthorizedTamperDemonstration() throws Exception {
+        writes.create("verification-4", request(4));
+        writes.create("verification-5", request(5));
+        ArchiveManifest manifest = retention.archive(new RetentionService.ArchiveRequest(
+                "verification-tenant", CHAIN_ID, 1, 2, "policy-demo"));
+        assertThat(manifest.recordCount()).isEqualTo(2);
+        assertThat(verification.verify(CHAIN_ID).status()).isEqualTo(VerificationResult.Status.VALID);
+
+        String originalPayload = jdbc.queryForObject("""
+                SELECT payload::text FROM audit_event
+                WHERE chain_id = ? AND sequence_number = 3
+                """, String.class, CHAIN_ID);
+        try {
+            jdbc.update("""
+                    UPDATE audit_event SET payload = '{"unauthorized":"change"}'::jsonb
+                    WHERE chain_id = ? AND sequence_number = 3
+                    """, CHAIN_ID);
+            VerificationResult modified = verification.verify(CHAIN_ID);
+            assertThat(modified.failureReason()).isEqualTo(
+                    VerificationResult.FailureReason.CONTENT_HASH_MISMATCH);
+            assertThat(modified.failureSequence()).isEqualTo(3);
+        } finally {
+            jdbc.update("UPDATE audit_event SET payload = CAST(? AS jsonb) WHERE chain_id = ? AND sequence_number = 3",
+                    originalPayload, CHAIN_ID);
+        }
+        assertThat(verification.verify(CHAIN_ID).status()).isEqualTo(VerificationResult.Status.VALID);
+        jdbc.update("DELETE FROM idempotency_record WHERE event_id = (SELECT event_id FROM audit_event WHERE chain_id = ? AND sequence_number = 4)", CHAIN_ID);
+        jdbc.update("DELETE FROM audit_event WHERE chain_id = ? AND sequence_number = 4", CHAIN_ID);
+        VerificationResult deleted = verification.verify(CHAIN_ID);
+        assertThat(deleted.failureReason()).isEqualTo(VerificationResult.FailureReason.SEQUENCE_GAP);
+        assertThat(deleted.failureSequence()).isEqualTo(5);
     }
 
     @Test

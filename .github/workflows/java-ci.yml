@@ -27,6 +27,13 @@ jobs:
           -Dtest=CanonicalizerTest,HashChainTest,AuthorizationPolicyTest test
       - name: Run full test suite
         run: mvn --batch-mode --no-transfer-progress test
+      - name: Repeat concurrency contract
+        run: |
+          for run in 1 2 3; do
+            mvn --batch-mode --no-transfer-progress -Dtest=ConcurrentWriteIntegrationTest test
+          done
+      - name: Run clean tamper demonstration
+        run: bash scripts/demo-tampering.sh
       - name: Report test failures
         if: failure()
         shell: bash
