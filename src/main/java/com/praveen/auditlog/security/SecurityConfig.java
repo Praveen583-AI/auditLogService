@@ -23,6 +23,7 @@ public class SecurityConfig {
 
     @Configuration(proxyBeanMethods = false)
     @EnableMethodSecurity
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     @ConditionalOnProperty(
             name = "audit.security.enabled",
             havingValue = "true",
@@ -72,6 +73,7 @@ public class SecurityConfig {
     }
 
     @Configuration(proxyBeanMethods = false)
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     @ConditionalOnProperty(
             name = "audit.security.enabled",
             havingValue = "false"
