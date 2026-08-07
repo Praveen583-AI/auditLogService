@@ -36,7 +36,7 @@ import static org.mockito.BDDMockito.given;
 
 @Testcontainers
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
-class AuditWriteConcurrencyTest {
+abstract class AuditWriteConcurrencyTest {
 
     private static final long ADVISORY_LOCK = 88442211L;
     private static final ThreadLocal<AuditRequestContext> REQUEST_CONTEXT =
@@ -52,6 +52,9 @@ class AuditWriteConcurrencyTest {
 
     @Autowired
     private AuditQueryService queries;
+
+    @Autowired
+    private ChainVerificationService verification;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -82,29 +85,30 @@ class AuditWriteConcurrencyTest {
 
     @Test
     void simultaneousSameChainWritesHaveUniqueContiguousSequences() throws Exception {
-        ExecutorService executor = Executors.newFixedThreadPool(2);
-        CountDownLatch ready = new CountDownLatch(2);
+        int writerCount = 8;
+        ExecutorService executor = Executors.newFixedThreadPool(writerCount);
+        CountDownLatch ready = new CountDownLatch(writerCount);
         CountDownLatch start = new CountDownLatch(1);
         try {
-            Future<CreateAuditEventResult> first = executor.submit(
-                    () -> appendAfterBarrier(
-                            context("tenant-same"), "same-1", ready, start
-                    )
-            );
-            Future<CreateAuditEventResult> second = executor.submit(
-                    () -> appendAfterBarrier(
-                            context("tenant-same"), "same-2", ready, start
-                    )
-            );
+            List<Future<CreateAuditEventResult>> futures = new ArrayList<>();
+            for (int index = 0; index < writerCount; index++) {
+                String key = "same-" + index;
+                futures.add(executor.submit(() -> appendAfterBarrier(
+                        context("tenant-same"), key, ready, start)));
+            }
 
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
             start.countDown();
 
-            List<Long> returnedSequences = List.of(
-                    first.get(10, TimeUnit.SECONDS).response().sequenceNumber(),
-                    second.get(10, TimeUnit.SECONDS).response().sequenceNumber()
-            );
-            assertThat(returnedSequences).containsExactlyInAnyOrder(1L, 2L);
+            List<CreateAuditEventResult> results = new ArrayList<>();
+            for (Future<CreateAuditEventResult> future : futures) {
+                results.add(future.get(15, TimeUnit.SECONDS));
+            }
+            assertThat(results).extracting(result -> result.response().sequenceNumber())
+                    .containsExactlyInAnyOrderElementsOf(
+                            java.util.stream.LongStream.rangeClosed(1, writerCount).boxed().toList());
+            assertThat(results).extracting(result -> result.response().eventId())
+                    .doesNotHaveDuplicates();
 
             List<EventLink> links = jdbc.query("""
                     SELECT sequence_number, previous_hash, content_hash
@@ -117,9 +121,21 @@ class AuditWriteConcurrencyTest {
                     row.getBytes("content_hash")
             ));
             assertThat(links).extracting(EventLink::sequence)
-                    .containsExactly(1L, 2L);
-            assertThat(links.get(1).previousHash())
-                    .containsExactly(links.get(0).contentHash());
+                    .containsExactlyElementsOf(
+                            java.util.stream.LongStream.rangeClosed(1, writerCount).boxed().toList());
+            for (int index = 1; index < links.size(); index++) {
+                assertThat(links.get(index).previousHash())
+                        .containsExactly(links.get(index - 1).contentHash());
+            }
+            assertThat(jdbc.queryForObject(
+                    "SELECT count(*) FROM idempotency_record WHERE tenant_id = 'tenant-same'",
+                    Long.class)).isEqualTo((long) writerCount);
+            REQUEST_CONTEXT.set(context("tenant-same"));
+            try {
+                assertThat(verification.verify("tenant:tenant-same").valid()).isTrue();
+            } finally {
+                REQUEST_CONTEXT.remove();
+            }
         } finally {
             executor.shutdownNow();
         }
@@ -140,6 +156,7 @@ class AuditWriteConcurrencyTest {
                     () -> append(context("tenant-a"), "chain-a")
             );
             awaitAdvisoryWait();
+            assertThat(blocked.isDone()).isFalse();
 
             Future<CreateAuditEventResult> independent = executor.submit(
                     () -> append(context("tenant-b"), "chain-b")
