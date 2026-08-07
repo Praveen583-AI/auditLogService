@@ -1,6 +1,9 @@
 # Data model
 
-This model supports append-only evidence, per-chain verification, idempotent ingestion, retention and archival, redaction, export, and recorded verification outcomes. It separates immutable evidence from mutable operational state.
+This document describes both implemented persistence and explicitly labeled
+design extensions. The prototype supports append-only evidence, per-chain
+verification, idempotent ingestion, archival, redaction overlays, and bounded
+exports. Verification results are returned but not persisted.
 
 ## Entity summary
 
@@ -9,8 +12,8 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 | `AuditEvent` | The authoritative audit fact and its chain proof | Immutable |
 | `ChainHead` | Coordinates the next position in one chain | Operational state |
 | `IdempotencyRecord` | Makes producer retries safe and detects key reuse with different input | Operational state with restricted transitions |
-| `ArchiveManifest` | Proves which contiguous range moved to an archive and where it is stored | Operational while preparing; immutable evidence when completed |
-| `RedactionAction` | Records an authorized redacted view without rewriting the source event | Lifecycle state; immutable when completed |
+| `ArchiveManifest` | Proves which contiguous range moved to an archive and where it is stored | Insert-only completed evidence; preparation is recorded in separate lifecycle actions |
+| `RedactionAction` | Records an authorized redacted view without rewriting the source event | Insert-only `redaction_record`; no mutable lifecycle status |
 | `VerificationResult` | Returns the outcome of a verification run | Immutable in-memory value in the prototype; persistence is design-only |
 | `ExportJob` | Tracks creation of a regulator or auditor export | Operational until terminal; completed artifact metadata is immutable |
 
@@ -34,7 +37,8 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 
 **Responsibility.** Serialize appends within one ordering scope and expose the expected end of that chain.
 
-**Key fields.** `chain_id`, `last_sequence`, `last_event_id`, `last_hash`, `version`, and `updated_at`.
+**Implemented key fields.** `chain_id`, `tenant_id`, `latest_sequence`,
+`latest_hash`, `version`, and `updated_at`. No last-event identifier is stored.
 
 **Invariants.**
 
@@ -42,7 +46,8 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 - An append inserts one `AuditEvent` and advances the head by exactly one in the same transaction.
 - Sequence and version never decrease.
 
-**Database shape.** Primary key `chain_id`; no additional index is required for the prototype. A foreign key from `last_event_id` is optional because physical archival can remove the referenced event.
+**Database shape.** Primary key `chain_id`, unique `tenant_id`, and unique
+`(chain_id, tenant_id)` for composite event and archive foreign keys.
 
 ## IdempotencyRecord
 
@@ -57,13 +62,21 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 - The same key with a different fingerprint is rejected.
 - A successful record identifies at most one event.
 
-**Database shape.** Primary key `idempotency_id`; unique constraint on the idempotency scope. Add an `expires_at` index only if expiry cleanup is implemented. A physical event foreign key is safe only when the record expires before event archival.
+**Database shape.** Primary key `idempotency_id`; unique constraint on the
+tenant/producer/operation/key-hash scope; event foreign key; and a partial
+`expires_at` index. Retention currently deletes associated idempotency rows
+before archiving their events; scheduled expiry cleanup is not implemented.
 
 ## ArchiveManifest
 
 **Responsibility.** Describe and authenticate a contiguous archived event range without treating authorized movement as tampering.
 
-**Key fields.** `archive_id`, `archive_action_id`, `chain_id`, `first_sequence`, `last_sequence`, `first_event_id`, `last_event_id`, `event_count`, `predecessor_hash`, `terminal_hash`, `hash_algorithm`, `canonicalization_version`, `object_locator`, `object_digest`, `retention_policy_version`, `status`, `archived_at`, and `failure_reason`.
+**Implemented key fields.** `manifest_id`, `manifest_version`, `tenant_id`,
+`chain_id`, `start_sequence`, `end_sequence`, `record_count`, boundary hashes,
+`bundle_checksum`, bundle/checksum versions, `policy_id`, `archived_at`, storage
+location/version, and signature metadata. Preparation and failure information
+belongs to append-only `archive_lifecycle_action` records; the manifest has no
+mutable status.
 
 **Invariants.**
 
@@ -71,22 +84,32 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 - The archive object is verified before active rows are removed.
 - Completed range, boundary proof, locator, digest, and policy metadata are frozen.
 
-**Database shape.** Primary key `archive_id`; foreign key `chain_id` to `ChainHead` with restricted deletion; unique `object_locator`; range lookup index on `(chain_id, first_sequence, last_sequence)` for completed manifests. Prevent overlap with a database exclusion constraint or an equivalent locked transaction. First and last event IDs are logical references, not foreign keys, because their rows may be archived.
+**Database shape.** Primary key `manifest_id`; restricted chain/tenant foreign
+key; unique range and storage-location/version constraints; range lookup index
+on `(tenant_id, chain_id, start_sequence)`. Overlap is rejected by the locked
+publication transaction, not a database exclusion constraint.
 
 ## RedactionAction
 
 **Responsibility.** Record who authorized a restricted presentation, which payload paths are affected, and how verification remains possible.
 
-**Key fields.** `redaction_action_id`, `event_id`, `chain_id`, `event_sequence`, `field_paths`, `redaction_method`, `replacement_representation`, `policy_version`, `reason`, `requested_by`, `approved_by`, `requested_at`, `executed_at`, `status`, `proof_metadata`, and `failure_reason`.
+**Implemented key fields.** `redaction_id`, `tenant_id`, `event_id`, one
+`json_pointer`, `policy_id`, `reason`, `authorized_by`, `authorized_at`,
+replacement text, nonce, original-value commitment, commitment algorithm, and
+commitment key identifier. Request/approval workflow and mutable status are not
+implemented.
 
 **Invariants.**
 
 - Only policy-authorized payload paths can be redacted.
 - Event identity, ordering, stored content, and chain hashes are unchanged.
-- Normal views apply completed actions; verification continues against original evidence.
-- Completed action details are immutable.
+- Normal views apply stored redaction records; verification continues against original evidence.
+- Stored redaction records are insert-only for runtime roles.
 
-**Database shape.** Primary key `redaction_action_id`; index `(event_id, executed_at DESC)`; optional completed-action index `(chain_id, event_sequence)`. Use a physical event foreign key only while archived event identities remain represented online.
+**Database shape.** Primary key `redaction_id`; unique
+`(tenant_id, event_id, json_pointer, policy_id)` and index
+`(tenant_id, event_id, authorized_at)`. There is deliberately no event foreign
+key because the hot event row may be archived.
 
 ## VerificationResult
 
@@ -114,35 +137,45 @@ indexes do not exist in the prototype.
 
 **Responsibility.** Track a stable actor- or resource-based evidence export and its integrity proof.
 
-**Key fields.** `export_job_id`, selector type, actor or resource selector, requested time range, `requested_by`, timestamps, `status`, `snapshot_sequence`, `snapshot_head_hash`, `record_count`, `bundle_locator`, `bundle_digest`, `format_version`, `included_archive_ids`, `redaction_view_version`, and `failure_reason`.
+**Implemented key fields.** `export_id`, `tenant_id`, selector type/value,
+`requested_by`, status and timestamps, artifact location, hashed download token,
+expiry, and failure code. Snapshot boundaries, record count, checksums, format,
+archive manifests, and redaction proofs are held inside the signed artifact;
+they are not separate `export_job` columns.
 
 **Invariants.**
 
 - Exactly one selector type is used.
-- A completed export has a frozen snapshot boundary, count, artifact locator, digest, format, and applicable redaction view.
+- A completed export has an artifact locator, expiry, and hashed download token;
+  its signed manifest contains the evidence boundary and section checksums.
 - An artifact is not released before its digest and proof metadata are final.
 
-**Database shape.** Primary key `export_job_id`; unique `bundle_locator` when present. Add queue-status and selector-history indexes only if asynchronous processing and job history queries are implemented.
+**Database shape.** Primary key `export_id`; index
+`(tenant_id, status, requested_at DESC)`. Artifact-location uniqueness and a
+durable asynchronous queue are not implemented.
 
 ## Query indexes and write cost
 
 | Requirement | Index | Cost and decision |
 |---|---|---|
 | Writes and ordered verification by chain | Unique `AuditEvent(chain_id, sequence)` | Mandatory; adds one index write but enforces ordering uniqueness and supports sequential reads. |
-| Search by actor and time | `AuditEvent(actor_id, occurred_at DESC, event_id)` | Supported; every append writes another index and high-cardinality actors increase storage. |
-| Search by resource and time | `AuditEvent(resource_type, resource_id, occurred_at DESC, event_id)` | Supported; necessary for resource evidence, with the same append and retention overhead. |
-| Filter by event type and time | `AuditEvent(event_type, occurred_at DESC, event_id)` | Add only if required by confirmed searches; it increases write amplification. |
-| Time-only reporting | `AuditEvent(occurred_at DESC, event_id)` | Defer unless time-only reports cannot use a selective index. |
+| Search by actor and time | `AuditEvent(tenant_id, actor_id, recorded_at DESC, chain_id, sequence_number, event_id)` | Implemented; every append writes another index and high-cardinality actors increase storage. |
+| Search by resource and time | `AuditEvent(tenant_id, resource_type, resource_id, recorded_at DESC, chain_id, sequence_number, event_id)` | Implemented; necessary for resource evidence, with the same append and retention overhead. |
+| Filter by event type and time | No dedicated index | Event type filtering is implemented but may scan/filter; add an index only after representative plans justify its write cost. |
+| Cross-chain tenant ordering | `AuditEvent(tenant_id, recorded_at DESC, chain_id, sequence_number, event_id)` | Implemented for keyset pagination. |
 | Arbitrary payload filtering | Broad JSON index | Out of the prototype: costly to maintain and not supported by a confirmed query contract. Promote stable, commonly queried fields instead. |
 | Idempotent retries | Unique idempotency-scope index | Mandatory; enables atomic conflict detection at the cost of one indexed write per accepted key. |
-| Ordered archive lookup | Completed-range archive index | Needed when archival is implemented; small compared with event indexes. |
+| Ordered archive lookup | `(tenant_id, chain_id, start_sequence)` | Implemented; small compared with event indexes. |
 
 Every additional event index increases append latency, storage, page writes, vacuum work, and archival cleanup cost. Indexes therefore follow demonstrated filters rather than speculative analytics.
 
 ## Transaction and lifecycle boundaries
 
 - **Append:** lock or conditionally update one `ChainHead`; validate idempotency; insert `AuditEvent`; advance the head; finalize `IdempotencyRecord`; commit atomically.
-- **Archive:** create a preparing manifest; write and verify the immutable object; complete and freeze the manifest; only then remove eligible active rows under privileged operational control.
+- **Archive:** append preparation actions; write and verify the archive bundle;
+  insert the signed manifest; then remove eligible hot rows in the same database
+  transaction as manifest publication. External object immutability is not
+  implemented.
 - **Redaction:** authorize and append a `RedactionAction`; reads derive the permitted view without updating `AuditEvent`.
 - **Verification:** read a stable scope across active events and completed manifests, then return a `VerificationResult`. Persisting verification history is not implemented.
 - **Export:** capture a chain boundary, gather active and archived evidence, apply the authorized redaction view, calculate the bundle digest, then complete the `ExportJob`.
