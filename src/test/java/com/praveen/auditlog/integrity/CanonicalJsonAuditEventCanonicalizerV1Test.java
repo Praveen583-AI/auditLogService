@@ -23,6 +23,40 @@ class CanonicalJsonAuditEventCanonicalizerV1Test {
             new Sha256AuditEventHasher(canonicalizer);
 
     @Test
+    void fixedVersionOneVectorProtectsTheByteContract() throws Exception {
+        CanonicalAuditEvent event = event(payload("{\"result\":\"accepted\"}"));
+        String expected = "{"
+                + "\\"actorId\\":\\"actor-1\\","
+                + "\\"actorIdentitySource\\":\\"PRODUCER_ASSERTED\\","
+                + "\\"actorType\\":\\"USER\\","
+                + "\\"canonicalizationVersion\\":1,"
+                + "\\"chainId\\":\\"tenant:tenant-1\\","
+                + "\\"domain\\":\\"audit-event\\","
+                + "\\"eventId\\":\\"00000000-0000-0000-0000-000000000001\\","
+                + "\\"eventSchemaVersion\\":1,"
+                + "\\"eventType\\":\\"ACCOUNT_UPDATED\\","
+                + "\\"hashAlgorithm\\":\\"SHA-256\\","
+                + "\\"occurredAt\\":\\"2026-08-07T14:30:12.123000Z\\","
+                + "\\"payload\\":{\\"result\\":\\"accepted\\"},"
+                + "\\"previousHash\\":"
+                + "\\"0000000000000000000000000000000000000000000000000000000000000000\\","
+                + "\\"producerId\\":\\"producer-1\\","
+                + "\\"recordedAt\\":\\"2026-08-07T14:30:12.456789Z\\","
+                + "\\"resourceId\\":\\"account-1\\","
+                + "\\"resourceType\\":\\"ACCOUNT\\","
+                + "\\"sequenceNumber\\":1,"
+                + "\\"tenantId\\":\\"tenant-1\\""
+                + "}";
+
+        assertThat(new String(
+                canonicalizer.canonicalize(event),
+                java.nio.charset.StandardCharsets.UTF_8
+        )).isEqualTo(expected);
+        assertThat(hasher.digestHex(event))
+                .isEqualTo("193a16824a9147906e669fa6c539f2a6fb6d3cb99656300704f9818180019d77");
+    }
+
+    @Test
     void objectOrderWhitespaceAndEquivalentNumbersProduceSameDigest() throws Exception {
         CanonicalAuditEvent first = event(payload(
                 "{\"z\":1.0,\"nested\":{\"b\":true,\"a\":null}}"
