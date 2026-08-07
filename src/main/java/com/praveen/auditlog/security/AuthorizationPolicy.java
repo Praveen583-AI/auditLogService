@@ -51,6 +51,14 @@ public final class AuthorizationPolicy {
         }
     }
 
+    public void requireCommitmentVerification(ActorContext actor, String targetTenantId) {
+        requireTenantAccess(actor, targetTenantId);
+        if (!actor.hasRole(ActorContext.Role.COMPLIANCE_OFFICER)
+                && !actor.hasRole(ActorContext.Role.AUDIT_ADMIN)) {
+            throw new AuthorizationDeniedException(Reason.ROLE_DENIED);
+        }
+    }
+
     public enum PrivilegedOperation {
         EXPORT,
         RETENTION,
