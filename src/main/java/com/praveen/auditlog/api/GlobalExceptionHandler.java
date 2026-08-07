@@ -3,6 +3,8 @@ package com.praveen.auditlog.api;
 import com.praveen.auditlog.application.ChainNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -19,6 +21,9 @@ import java.util.regex.Pattern;
 
 @RestControllerAdvice
 public final class GlobalExceptionHandler {
+
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     public static final String CORRELATION_HEADER = "X-Correlation-Id";
     private static final Pattern SAFE_CORRELATION_ID =
@@ -156,6 +161,18 @@ public final class GlobalExceptionHandler {
             String correlationId,
             List<ApiError.FieldViolation> violations
     ) {
+        if (status.is5xxServerError()) {
+            LOGGER.error(
+                    "audit_request_failed status={} code={} correlationId={} violationCount={}",
+                    status.value(), code, correlationId, violations.size()
+            );
+        } else {
+            LOGGER.warn(
+                    "audit_request_rejected status={} code={} correlationId={} violationCount={}",
+                    status.value(), code, correlationId, violations.size()
+            );
+        }
+
         ApiError body = new ApiError(code, message, correlationId, violations);
         return ResponseEntity.status(status)
                 .header(CORRELATION_HEADER, correlationId)

@@ -6,6 +6,9 @@ import com.praveen.auditlog.api.dto.CreateAuditEventRequest;
 import com.praveen.auditlog.api.dto.ResourceDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -22,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 @Testcontainers
+@ExtendWith(OutputCaptureExtension.class)
 @SpringBootTest(webEnvironment = WebEnvironment.NONE)
 class ChainVerificationIntegrationTest {
 
@@ -76,7 +80,7 @@ class ChainVerificationIntegrationTest {
     }
 
     @Test
-    void modifiedPayloadFailsAtChangedEvent() {
+    void modifiedPayloadFailsAtChangedEvent(CapturedOutput output) {
         jdbc.update("""
                 UPDATE audit_event
                 SET payload = '{"tampered":true}'::jsonb
@@ -93,6 +97,13 @@ class ChainVerificationIntegrationTest {
         );
         assertThat(result.failureSequence()).isEqualTo(2);
         assertThat(result.verifiedCount()).isEqualTo(1);
+        assertThat(output).contains("CONTENT_HASH_MISMATCH")
+                .contains("failureSequence=2")
+                .contains("verifiedCount=1")
+                .doesNotContain("tampered")
+                .doesNotContain("payload")
+                .doesNotContain("previousHash")
+                .doesNotContain("contentHash");
     }
 
     @Test

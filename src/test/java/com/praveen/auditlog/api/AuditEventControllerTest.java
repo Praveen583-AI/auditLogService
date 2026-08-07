@@ -6,6 +6,9 @@ import com.praveen.auditlog.application.CreateAuditEventResult;
 import com.praveen.auditlog.application.CreateAuditEventUseCase;
 import com.praveen.auditlog.application.VerificationResult;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -15,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.containsString;
@@ -28,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+@ExtendWith(OutputCaptureExtension.class)
 @WebMvcTest(AuditEventController.class)
 class AuditEventControllerTest {
 
@@ -68,7 +73,9 @@ class AuditEventControllerTest {
     }
 
     @Test
-    void conflictingIdempotencyKeyReturns409WithoutOriginalData() throws Exception {
+    void conflictingIdempotencyKeyReturns409WithoutOriginalData(
+            CapturedOutput output
+    ) throws Exception {
         given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
                 .willThrow(new IdempotencyKeyReusedException());
 
@@ -80,10 +87,18 @@ class AuditEventControllerTest {
                 .andExpect(content().string(not(containsString("secret-account-value"))))
                 .andExpect(content().string(not(containsString("fingerprint"))))
                 .andExpect(content().string(not(containsString("stackTrace"))));
+
+        assertThat(output).contains("IDEMPOTENCY_KEY_REUSED")
+                .contains(CORRELATION_ID)
+                .doesNotContain("secret-account-value")
+                .doesNotContain("fingerprint")
+                .doesNotContain("stackTrace");
     }
 
     @Test
-    void oversizedPayloadReturns413WithoutEchoingPayload() throws Exception {
+    void oversizedPayloadReturns413WithoutEchoingPayload(
+            CapturedOutput output
+    ) throws Exception {
         given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
                 .willThrow(new PayloadTooLargeException());
 
@@ -95,10 +110,18 @@ class AuditEventControllerTest {
                 .andExpect(content().string(not(containsString("sensitive-payload-marker"))))
                 .andExpect(content().string(not(containsString("PayloadTooLargeException"))))
                 .andExpect(content().string(not(containsString("stackTrace"))));
+
+        assertThat(output).contains("PAYLOAD_LIMIT_EXCEEDED")
+                .contains(CORRELATION_ID)
+                .doesNotContain("sensitive-payload-marker")
+                .doesNotContain("PayloadTooLargeException")
+                .doesNotContain("stackTrace");
     }
 
     @Test
-    void unexpectedFailureReturnsFixed500WithoutExceptionDetails() throws Exception {
+    void unexpectedFailureReturnsFixed500WithoutExceptionDetails(
+            CapturedOutput output
+    ) throws Exception {
         given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
                 .willThrow(new RuntimeException(
                         "password=secret SQL=select * from audit_event"));
@@ -111,6 +134,13 @@ class AuditEventControllerTest {
                 .andExpect(content().string(not(containsString("select *"))))
                 .andExpect(content().string(not(containsString("RuntimeException"))))
                 .andExpect(content().string(not(containsString("stackTrace"))));
+
+        assertThat(output).contains("INTERNAL_ERROR")
+                .contains(CORRELATION_ID)
+                .doesNotContain("password=secret")
+                .doesNotContain("select *")
+                .doesNotContain("RuntimeException")
+                .doesNotContain("stackTrace");
     }
 
     @Test

@@ -4,6 +4,8 @@ import com.praveen.auditlog.integrity.CanonicalizationException;
 import com.praveen.auditlog.integrity.CanonicalEventSerializer;
 import com.praveen.auditlog.integrity.HashService;
 import com.praveen.auditlog.persistence.ChainVerificationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +15,8 @@ import java.util.Arrays;
 @Service
 public class ChainVerificationService {
 
+    private static final Logger LOGGER =
+            LoggerFactory.getLogger(ChainVerificationService.class);
     private static final byte[] GENESIS_HASH = new byte[32];
 
     private final AuditRequestContextProvider contextProvider;
@@ -49,7 +53,21 @@ public class ChainVerificationService {
         if (!boundary.exists()) {
             throw new ChainNotFoundException();
         }
-        return state.finish(boundary);
+
+        VerificationResult result = state.finish(boundary);
+        if (result.status() == VerificationResult.Status.VALID) {
+            LOGGER.info(
+                    "chain_verification_completed chainId={} status={} verifiedCount={}",
+                    chainId, result.status(), result.verifiedCount()
+            );
+        } else {
+            LOGGER.warn(
+                    "chain_verification_completed chainId={} status={} failureReason={} failureSequence={} verifiedCount={}",
+                    chainId, result.status(), result.failureReason(),
+                    result.failureSequence(), result.verifiedCount()
+            );
+        }
+        return result;
     }
 
     /**
