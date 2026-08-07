@@ -1,0 +1,264 @@
+openapi: 3.1.0
+info:
+  title: Audit Log API
+  version: 1.0.0
+  description: Prototype contract for appending tamper-evident audit events.
+servers:
+  - url: /
+paths:
+  /v1/audit/events:
+    post:
+      operationId: appendAuditEvent
+      summary: Append an audit event
+      description: |
+        Atomically appends an event to the authenticated tenant's chain.
+        A first successful request returns 201. An exact idempotent replay
+        returns the original receipt with 200. Reuse of the same scoped key
+        for different request semantics returns 409.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppendAuditEventRequest'
+            examples:
+              accountUpdated:
+                value:
+                  eventType: ACCOUNT_UPDATED
+                  eventSchemaVersion: 1
+                  occurredAt: '2026-08-07T14:30:12.123Z'
+                  actor:
+                    id: employee-42
+                    type: USER
+                  resource:
+                    type: ACCOUNT
+                    id: account-123
+                  payload:
+                    changedFields:
+                      - address
+      responses:
+        '201':
+          description: Event created and durably appended.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotency-Replayed:
+              $ref: '#/components/headers/IdempotencyReplayed'
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppendAuditEventResponse'
+        '200':
+          description: Exact idempotent replay; the original receipt is returned.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+            Idempotency-Replayed:
+              description: Always true for this response.
+              schema:
+                type: boolean
+                const: true
+            X-Request-Id:
+              $ref: '#/components/headers/RequestId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppendAuditEventResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalError'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Opaque caller-generated key scoped to the authenticated tenant, producer, and operation.
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 255
+  headers:
+    Location:
+      description: Canonical path of the created event.
+      schema:
+        type: string
+    IdempotencyReplayed:
+      description: True when the response replays a previously committed result.
+      schema:
+        type: boolean
+    RequestId:
+      description: Identifier for this API attempt, used for troubleshooting.
+      schema:
+        type: string
+  schemas:
+    AppendAuditEventRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - eventType
+        - eventSchemaVersion
+        - occurredAt
+        - actor
+        - resource
+        - payload
+      properties:
+        eventType:
+          type: string
+          minLength: 1
+          maxLength: 100
+        eventSchemaVersion:
+          type: integer
+          format: int32
+          minimum: 1
+        occurredAt:
+          type: string
+          format: date-time
+        actor:
+          $ref: '#/components/schemas/Actor'
+        resource:
+          $ref: '#/components/schemas/Resource'
+        payload:
+          type: object
+          description: Event-specific data validated against eventType and eventSchemaVersion.
+          additionalProperties: true
+    Actor:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - type
+      properties:
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+        type:
+          type: string
+          minLength: 1
+          maxLength: 50
+    Resource:
+      type: object
+      additionalProperties: false
+      required:
+        - type
+        - id
+      properties:
+        type:
+          type: string
+          minLength: 1
+          maxLength: 100
+        id:
+          type: string
+          minLength: 1
+          maxLength: 255
+    AppendAuditEventResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - eventId
+        - chainId
+        - sequenceNumber
+        - recordedAt
+        - contentHash
+        - hashAlgorithm
+        - canonicalizationVersion
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        chainId:
+          type: string
+        sequenceNumber:
+          type: integer
+          format: int64
+          minimum: 1
+        recordedAt:
+          type: string
+          format: date-time
+        contentHash:
+          type: string
+          description: Lowercase hexadecimal digest.
+          pattern: '^[0-9a-f]{64}$'
+        hashAlgorithm:
+          type: string
+          enum:
+            - SHA-256
+        canonicalizationVersion:
+          type: integer
+          format: int32
+          minimum: 1
+    ApiError:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+        - requestId
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+        field:
+          type:
+            - string
+            - 'null'
+  responses:
+    BadRequest:
+      description: Malformed request, missing idempotency key, or invalid field syntax.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Authentication is missing or invalid.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: The authenticated producer is not permitted to append this event.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: The scoped idempotency key was previously used for different request semantics.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnprocessableEntity:
+      description: The request fails its selected event schema.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalError:
+      description: Unexpected server failure with no internal implementation details exposed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
