@@ -10,10 +10,15 @@ The platform provides tamper-evident audit evidence. Hash chaining makes modific
 - Per-chain sequence order, previous hashes and chain heads
 - Idempotency receipts
 - Archive objects and archive manifests
-- Verification results and audit-of-audit records
+- Verification outputs and implemented audit-of-audit action records
 - Database credentials, archive credentials and signing keys
 
 ## Trust boundaries and threat actors
+
+The table describes the target control set. External anchors,
+retention-locked object storage, non-exportable KMS keys, and independent
+key-use auditing are **production enhancements**, not implemented prototype
+controls. Implemented status is summarized in `security-review.md`.
 
 | Boundary or actor | Threat | Primary control | Detection or recovery |
 |---|---|---|---|

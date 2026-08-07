@@ -6,8 +6,6 @@ import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.TransientDataAccessResourceException;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Autowired;
-import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.springframework.transaction.TransactionSystemException;
 
 @Service
@@ -20,14 +18,6 @@ public class AuditWriteService implements CreateAuditEventUseCase {
     private final RetryPolicy retryPolicy;
     private final OperationalMetrics metrics;
 
-    public AuditWriteService(
-            TransactionalAuditAppender appender,
-            RetryPolicy retryPolicy
-    ) {
-        this(appender, retryPolicy, new OperationalMetrics(new SimpleMeterRegistry()));
-    }
-
-    @Autowired
     public AuditWriteService(
             TransactionalAuditAppender appender,
             RetryPolicy retryPolicy,

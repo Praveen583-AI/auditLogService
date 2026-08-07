@@ -56,7 +56,7 @@ Every event stores:
 
 The hash covers the event's immutable identity, order, classification, common evidence fields, timestamps, original payload, predecessor hash, and version metadata. Exact serialization is governed by the stored canonicalization version.
 
-The append transaction inserts the event and advances its chain head atomically. Verification proceeds in sequence and records an immutable `VerificationResult`.
+The append transaction inserts the event and advances its chain head atomically. Verification proceeds in sequence and returns a `VerificationResult`. The prototype does not persist verification-run history; an append-only verification history is a production enhancement.
 
 The prototype guarantees total recorded order only within one tenant chain. It intentionally provides no total order across tenants. Cross-chain timestamps are reporting data, not cryptographic ordering proof.
 

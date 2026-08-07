@@ -233,7 +233,8 @@ It reuses normal query behavior rather than becoming a second query engine.
 
 - Event validation, predecessor selection, hash construction, atomic persistence, and write acknowledgement.
 - Query and pagination.
-- `GET /audit/verify`.
+- Chain verification. The assignment names `GET /audit/verify`; the implemented
+  versioned route is `GET /v1/audit/events/chains/{chainId}/verification`.
 - Structured redaction for the prototype.
 - Narrow compliance query.
 - Bulk Export for the prototype dataset.

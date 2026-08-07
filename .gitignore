@@ -1,0 +1,17 @@
+target/
+.m2-local/
+.idea/
+.vscode/
+*.iml
+.env
+.env.*
+!.env.example
+*.log
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+local-archives/
+local-exports/

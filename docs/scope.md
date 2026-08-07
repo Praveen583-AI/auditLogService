@@ -15,7 +15,7 @@ The two-to-three-day prototype must demonstrate the assignment's required behavi
 | Pagination | Explicit requirement for large result sets. |
 | Record content hash, preceding-record hash, and genesis value | Explicit tamper-evidence requirements. |
 | Deterministic record order | Necessary to identify the immediately preceding record; the chosen rule must be documented. |
-| `GET /audit/verify` for intact and broken chains | Explicit Scenario A endpoint and validation mechanism. |
+| `GET /v1/audit/events/chains/{chainId}/verification` for intact and broken chains | Implemented Scenario A endpoint and validation mechanism. |
 | Direct data-store tampering demonstration | Explicitly prescribed validation sequence. |
 | Configurable retention window | Explicit Scenario B requirement. |
 | One retention behavior: archival or soft deletion | The assignment permits either; implementing both is unnecessary in this timebox. |

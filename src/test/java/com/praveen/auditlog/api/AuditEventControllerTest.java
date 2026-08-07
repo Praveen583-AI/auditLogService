@@ -46,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AuditEventControllerTest {
 
     private static final String PATH = "/v1/audit/events";
-    private static final String IDEMPOTENCY_KEY = "01J4QX8T2M7K9P3Y6R5N1C0BHA";
+    private static final String IDEMPOTENCY_KEY = "test-idempotency-key";
     private static final String CORRELATION_ID = "test-correlation-123";
 
     @Autowired
@@ -139,20 +139,20 @@ class AuditEventControllerTest {
     ) throws Exception {
         given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
                 .willThrow(new RuntimeException(
-                        "password=secret SQL=select * from audit_event"));
+                        "fixture-sensitive-database-detail"));
 
         mockMvc.perform(validRequest("sensitive-payload-marker"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
                 .andExpect(jsonPath("$.message").value("The request could not be completed."))
-                .andExpect(content().string(not(containsString("password=secret"))))
+                .andExpect(content().string(not(containsString("fixture-sensitive-database-detail"))))
                 .andExpect(content().string(not(containsString("select *"))))
                 .andExpect(content().string(not(containsString("RuntimeException"))))
                 .andExpect(content().string(not(containsString("stackTrace"))));
 
         assertThat(output).contains("INTERNAL_ERROR")
                 .contains(CORRELATION_ID)
-                .doesNotContain("password=secret")
+                .doesNotContain("fixture-sensitive-database-detail")
                 .doesNotContain("select *")
                 .doesNotContain("RuntimeException")
                 .doesNotContain("stackTrace");
@@ -243,7 +243,7 @@ class AuditEventControllerTest {
         given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
                 .willThrow(new TemporaryDatabaseFailureException(
                         new RuntimeException(
-                                "host=db-secret password=secret payload-value"
+                                "fixture-sensitive-connection-detail"
                         )
                 ));
 
@@ -258,7 +258,7 @@ class AuditEventControllerTest {
         assertThat(output).contains("TEMPORARY_DATABASE_FAILURE")
                 .contains(CORRELATION_ID)
                 .doesNotContain("db-secret")
-                .doesNotContain("password=secret")
+                .doesNotContain("fixture-sensitive-connection-detail")
                 .doesNotContain("payload-value");
     }
 

@@ -15,7 +15,7 @@ A prototype criterion is accepted only when it is observable through an API call
 | A-5 | Events can be filtered by `actorId`, `resourceType` plus `resourceId`, `eventType`, and `from` / `to`, individually and in supported combinations. | Query API integration tests. |
 | A-6 | Pagination retrieves a multi-page result set without unexpected omissions or duplicates. | Pagination integration test. |
 | A-7 | Each stored event has its content hash and preceding-record hash; the first uses the documented genesis value. | Database inspection. |
-| A-8 | `GET /audit/verify` reports an intact chain for unmodified records. | Verification API test. |
+| A-8 | `GET /v1/audit/events/chains/{chainId}/verification` reports an intact chain for unmodified records. | Verification API test. |
 | A-9 | Direct modification of a stored event causes verification to report a broken chain. | Database modification followed by API verification. |
 | A-10 | Verification identifies the first inconsistent record and a supported violation type. | Tampering integration test. |
 | A-11 | Hash inputs, ordering, genesis value, and supported violation types are documented. | Architecture documentation. |

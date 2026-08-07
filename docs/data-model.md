@@ -11,7 +11,7 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 | `IdempotencyRecord` | Makes producer retries safe and detects key reuse with different input | Operational state with restricted transitions |
 | `ArchiveManifest` | Proves which contiguous range moved to an archive and where it is stored | Operational while preparing; immutable evidence when completed |
 | `RedactionAction` | Records an authorized redacted view without rewriting the source event | Lifecycle state; immutable when completed |
-| `VerificationResult` | Records the outcome of a verification run | Immutable observation |
+| `VerificationResult` | Returns the outcome of a verification run | Immutable in-memory value in the prototype; persistence is design-only |
 | `ExportJob` | Tracks creation of a regulator or auditor export | Operational until terminal; completed artifact metadata is immutable |
 
 ## AuditEvent
@@ -90,17 +90,25 @@ This model supports append-only evidence, per-chain verification, idempotent ing
 
 ## VerificationResult
 
-**Responsibility.** Preserve what was checked, when it was checked, and the first detected inconsistency.
+**Prototype responsibility.** Return what was checked and the first detected
+inconsistency. The current implementation is an immutable response value and is
+not persisted.
 
-**Key fields.** `verification_id`, `verification_type`, `chain_id`, scope boundaries, `started_at`, `completed_at`, `status` (`intact`, `broken`, or `incomplete`), `records_checked`, first inconsistent event or sequence, `violation_type`, expected and observed values, chain-head snapshot, algorithm versions, archive IDs, and `details`.
+**Implemented fields.** `status`, `valid`, `failure_reason`,
+`failure_sequence`, `verified_count`, `last_verified_sequence`, and
+`last_verified_hash`.
 
-**Invariants.**
+**Implemented invariants.**
 
-- Every run creates a new result; prior results are not overwritten.
-- The result identifies the exact scope and versions used.
-- Broken or incomplete results retain enough detail to reproduce the investigation.
+- `valid=true` only for `VALID`; `valid=false` only for `INVALID`.
+- `INDETERMINATE` has no Boolean validity claim.
+- Any non-valid result includes a stable failure reason.
 
-**Database shape.** Primary key `verification_id`; foreign key `chain_id` to `ChainHead`; index `(chain_id, completed_at DESC)`. The first inconsistent event is a logical reference because the condition being reported may be a missing or archived record.
+**Design-only production enhancement.** If verification-run history becomes a
+requirement, persist a new append-only record containing a verification ID,
+requester, tenant and chain scope, start and completion times, result, checked
+boundaries, algorithm versions, and first inconsistency. Such a table and its
+indexes do not exist in the prototype.
 
 ## ExportJob
 
@@ -136,7 +144,7 @@ Every additional event index increases append latency, storage, page writes, vac
 - **Append:** lock or conditionally update one `ChainHead`; validate idempotency; insert `AuditEvent`; advance the head; finalize `IdempotencyRecord`; commit atomically.
 - **Archive:** create a preparing manifest; write and verify the immutable object; complete and freeze the manifest; only then remove eligible active rows under privileged operational control.
 - **Redaction:** authorize and append a `RedactionAction`; reads derive the permitted view without updating `AuditEvent`.
-- **Verification:** read a stable scope across active events and completed manifests, then append a `VerificationResult`.
+- **Verification:** read a stable scope across active events and completed manifests, then return a `VerificationResult`. Persisting verification history is not implemented.
 - **Export:** capture a chain boundary, gather active and archived evidence, apply the authorized redaction view, calculate the bundle digest, then complete the `ExportJob`.
 
 ## Assumptions requiring confirmation
