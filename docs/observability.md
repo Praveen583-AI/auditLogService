@@ -26,6 +26,10 @@ Integrity failures, invalid archive signatures/checksums and sustained write fai
 
 ## Logs and traces
 
-`correlationId` follows an incoming request; `eventId` and `chainId` identify an accepted append or verification; `jobId` follows export/archive work. Background execution creates its own trace while retaining the originating correlation as metadata. These identifiers may appear in protected structured logs but never as metric labels.
+Implemented write and verification logs propagate `correlationId` and use
+event/chain/sequence identifiers without payload values. Export and archive
+services do not yet implement distributed tracing or consistent structured job
+logs. A production worker should propagate `jobId` and originating correlation
+metadata into a new trace. None of these identifiers belongs in metric labels.
 
 Never log payloads, actor claims or contact data, idempotency keys, request fingerprints, redacted/original values, commitments, tokens, credentials, signing keys or raw exported records. SQL parameters and stack traces stay out of public error responses. Traces contain operation names and timing, not request bodies or audit evidence.
