@@ -29,7 +29,7 @@ jobs:
         shell: bash
         run: |
           if compgen -G "target/surefire-reports/*.txt" > /dev/null; then
-            details=$(grep -h -E "Tests run:|<<< FAILURE|<<< ERROR|Caused by:|Exception" target/surefire-reports/*.txt | head -c 50000)
+            details=$(cat target/surefire-reports/*.txt | tail -c 50000)
             details=${details//'%'/'%25'}
             details=${details//$'\n'/'%0A'}
             details=${details//$'\r'/'%0D'}
