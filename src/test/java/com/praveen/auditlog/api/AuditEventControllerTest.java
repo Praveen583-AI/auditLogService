@@ -1,7 +1,14 @@
 package com.praveen.auditlog.api;
 
 import com.praveen.auditlog.api.dto.AuditEventResponse;
+import com.praveen.auditlog.application.AuditEventSpecification;
+import com.praveen.auditlog.application.AuditQueryService;
+import com.praveen.auditlog.application.AuditRequestContext;
+import com.praveen.auditlog.application.AuditRequestContextProvider;
+import com.praveen.auditlog.application.ChainBusyException;
 import com.praveen.auditlog.application.ChainVerificationService;
+import com.praveen.auditlog.application.InvalidCursorException;
+import com.praveen.auditlog.application.TemporaryDatabaseFailureException;
 import com.praveen.auditlog.application.CreateAuditEventResult;
 import com.praveen.auditlog.application.CreateAuditEventUseCase;
 import com.praveen.auditlog.application.VerificationResult;
@@ -48,6 +55,12 @@ class AuditEventControllerTest {
 
     @MockitoBean
     private ChainVerificationService chainVerification;
+
+    @MockitoBean
+    private AuditQueryService auditQuery;
+
+    @MockitoBean
+    private AuditRequestContextProvider contextProvider;
 
     @Test
     void invalidRequestReturns400WithSafeViolations() throws Exception {
@@ -162,6 +175,89 @@ class AuditEventControllerTest {
                 .andExpect(jsonPath("$.failureReason")
                         .value("CONTENT_HASH_MISMATCH"))
                 .andExpect(jsonPath("$.failureSequence").value(2));
+    }
+
+    @Test
+    void malformedCursorReturns400WithoutLoggingCursor(
+            CapturedOutput output
+    ) throws Exception {
+        String rawCursor = "sensitive-invalid-cursor";
+        given(contextProvider.currentContext()).willReturn(
+                new AuditRequestContext(
+                        "tenant-1", "producer-1", "actor-1",
+                        "USER", "AUTHENTICATED_PRINCIPAL"
+                )
+        );
+        given(auditQuery.search(
+                eq("tenant-1"),
+                any(AuditEventSpecification.class),
+                eq(50),
+                eq(rawCursor)
+        )).willThrow(new InvalidCursorException(
+                InvalidCursorException.Reason.MALFORMED
+        ));
+
+        mockMvc.perform(get(PATH)
+                        .param("cursor", rawCursor)
+                        .header("X-Correlation-Id", CORRELATION_ID))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("CURSOR_MALFORMED"))
+                .andExpect(jsonPath("$.correlationId").value(CORRELATION_ID))
+                .andExpect(content().string(not(containsString(rawCursor))));
+
+        assertThat(output).contains("CURSOR_MALFORMED")
+                .contains(CORRELATION_ID)
+                .doesNotContain(rawCursor);
+    }
+
+    @Test
+    void exhaustedChainLockReturns503WithRetryAfter(
+            CapturedOutput output
+    ) throws Exception {
+        given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
+                .willThrow(new ChainBusyException(
+                        new RuntimeException("sensitive lock detail")
+                ));
+
+        mockMvc.perform(validRequest("sensitive-payload-marker"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(header().string("Retry-After", "1"))
+                .andExpect(jsonPath("$.code").value("CHAIN_BUSY"))
+                .andExpect(jsonPath("$.correlationId").value(CORRELATION_ID))
+                .andExpect(content().string(not(
+                        containsString("sensitive lock detail")
+                )));
+
+        assertThat(output).contains("CHAIN_BUSY")
+                .contains(CORRELATION_ID)
+                .doesNotContain("sensitive lock detail")
+                .doesNotContain("sensitive-payload-marker");
+    }
+
+    @Test
+    void transientConnectionFailureReturnsSanitized503(
+            CapturedOutput output
+    ) throws Exception {
+        given(createAuditEvent.create(eq(IDEMPOTENCY_KEY), any()))
+                .willThrow(new TemporaryDatabaseFailureException(
+                        new RuntimeException(
+                                "host=db-secret password=secret payload-value"
+                        )
+                ));
+
+        mockMvc.perform(validRequest("payload-value"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code")
+                        .value("TEMPORARY_DATABASE_FAILURE"))
+                .andExpect(jsonPath("$.correlationId").value(CORRELATION_ID))
+                .andExpect(content().string(not(containsString("db-secret"))))
+                .andExpect(content().string(not(containsString("payload-value"))));
+
+        assertThat(output).contains("TEMPORARY_DATABASE_FAILURE")
+                .contains(CORRELATION_ID)
+                .doesNotContain("db-secret")
+                .doesNotContain("password=secret")
+                .doesNotContain("payload-value");
     }
 
     @Test

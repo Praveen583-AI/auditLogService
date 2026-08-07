@@ -157,16 +157,17 @@ public class AuditQueryService {
         CursorCodec.Mode expected = specification.singleChain()
                 ? CursorCodec.Mode.SINGLE_CHAIN
                 : CursorCodec.Mode.CROSS_CHAIN;
-        if (cursor.mode() != expected
+        if (cursor.purpose() != CursorCodec.Purpose.AUDIT_EVENT_SEARCH
+                || cursor.mode() != expected
                 || !fingerprint.equals(cursor.filterFingerprint())) {
-            throw new IllegalArgumentException(
-                    "Cursor does not belong to this search"
+            throw new InvalidCursorException(
+                    InvalidCursorException.Reason.CONTEXT_MISMATCH
             );
         }
         if (specification.singleChain()
                 && !specification.chainId().equals(cursor.chainId())) {
-            throw new IllegalArgumentException(
-                    "Cursor does not belong to this chain"
+            throw new InvalidCursorException(
+                    InvalidCursorException.Reason.CONTEXT_MISMATCH
             );
         }
     }

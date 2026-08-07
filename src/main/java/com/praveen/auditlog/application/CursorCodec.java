@@ -21,7 +21,9 @@ public class CursorCodec {
 
     public String encode(Cursor cursor) {
         if (cursor.version() != VERSION) {
-            throw new IllegalArgumentException("Unsupported cursor version");
+            throw new InvalidCursorException(
+                    InvalidCursorException.Reason.VERSION_UNSUPPORTED
+            );
         }
         try {
             return Base64.getUrlEncoder().withoutPadding().encodeToString(
@@ -40,16 +42,23 @@ public class CursorCodec {
             byte[] bytes = Base64.getUrlDecoder().decode(encoded);
             Cursor cursor = objectMapper.readValue(bytes, Cursor.class);
             if (cursor.version() != VERSION) {
-                throw new IllegalArgumentException("Unsupported cursor version");
+                throw new InvalidCursorException(
+                        InvalidCursorException.Reason.VERSION_UNSUPPORTED
+                );
             }
             return cursor;
+        } catch (InvalidCursorException error) {
+            throw error;
         } catch (IllegalArgumentException | IOException error) {
-            throw new IllegalArgumentException("Invalid cursor", error);
+            throw new InvalidCursorException(
+                    InvalidCursorException.Reason.MALFORMED, error
+            );
         }
     }
 
     public record Cursor(
             int version,
+            Purpose purpose,
             Mode mode,
             String filterFingerprint,
             Instant recordedAt,
@@ -59,7 +68,8 @@ public class CursorCodec {
     ) {
         public static Cursor singleChain(String fingerprint, String chainId, long sequence) {
             return new Cursor(
-                    VERSION, Mode.SINGLE_CHAIN, fingerprint, null,
+                    VERSION, Purpose.AUDIT_EVENT_SEARCH,
+                    Mode.SINGLE_CHAIN, fingerprint, null,
                     chainId, sequence, null
             );
         }
@@ -72,12 +82,18 @@ public class CursorCodec {
                 UUID eventId
         ) {
             return new Cursor(
-                    VERSION, Mode.CROSS_CHAIN, fingerprint, recordedAt,
+                    VERSION, Purpose.AUDIT_EVENT_SEARCH,
+                    Mode.CROSS_CHAIN, fingerprint, recordedAt,
                     chainId, sequence, eventId
             );
         }
 
         public Cursor {
+            if (purpose == null || mode == null) {
+                throw new IllegalArgumentException(
+                        "Cursor purpose and mode are required"
+                );
+            }
             if (filterFingerprint == null || filterFingerprint.isBlank()) {
                 throw new IllegalArgumentException("Cursor fingerprint is required");
             }
@@ -90,6 +106,12 @@ public class CursorCodec {
                 throw new IllegalArgumentException("Incomplete cross-chain cursor");
             }
         }
+    }
+
+    public enum Purpose {
+        AUDIT_EVENT_SEARCH,
+        AUDIT_EXPORT,
+        CHAIN_VERIFICATION
     }
 
     public enum Mode {

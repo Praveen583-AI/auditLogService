@@ -1,6 +1,9 @@
 package com.praveen.auditlog.api;
 
+import com.praveen.auditlog.application.ChainBusyException;
 import com.praveen.auditlog.application.ChainNotFoundException;
+import com.praveen.auditlog.application.InvalidCursorException;
+import com.praveen.auditlog.application.TemporaryDatabaseFailureException;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -61,6 +64,61 @@ public final class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
                 "The request is invalid.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidCursorException.class)
+    public ResponseEntity<ApiError> invalidCursor(
+            InvalidCursorException exception,
+            HttpServletRequest request
+    ) {
+        String code = switch (exception.reason()) {
+            case MALFORMED -> "CURSOR_MALFORMED";
+            case VERSION_UNSUPPORTED -> "CURSOR_VERSION_UNSUPPORTED";
+            case CONTEXT_MISMATCH -> "CURSOR_CONTEXT_MISMATCH";
+        };
+        return response(
+                HttpStatus.BAD_REQUEST,
+                code,
+                "The pagination cursor is invalid.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(ChainBusyException.class)
+    public ResponseEntity<ApiError> chainBusy(
+            ChainBusyException ignored,
+            HttpServletRequest request
+    ) {
+        String correlationId = correlationId(request);
+        LOGGER.warn(
+                "audit_request_rejected status={} code={} correlationId={} violationCount=0",
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "CHAIN_BUSY", correlationId
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", "1")
+                .header(CORRELATION_HEADER, correlationId)
+                .body(new ApiError(
+                        "CHAIN_BUSY",
+                        "The audit event could not be appended because the chain remained busy.",
+                        correlationId,
+                        List.of()
+                ));
+    }
+
+    @ExceptionHandler(TemporaryDatabaseFailureException.class)
+    public ResponseEntity<ApiError> temporaryDatabaseFailure(
+            TemporaryDatabaseFailureException ignored,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "TEMPORARY_DATABASE_FAILURE",
+                "Audit storage is temporarily unavailable.",
                 correlationId(request),
                 List.of()
         );
@@ -147,6 +205,13 @@ public final class GlobalExceptionHandler {
     }
 
     private String correlationId(HttpServletRequest request) {
+        Object assigned = request.getAttribute(
+                CorrelationIdFilter.REQUEST_ATTRIBUTE
+        );
+        if (assigned instanceof String value && !value.isBlank()) {
+            return value;
+        }
+
         String supplied = request.getHeader(CORRELATION_HEADER);
         if (supplied != null && SAFE_CORRELATION_ID.matcher(supplied).matches()) {
             return supplied;

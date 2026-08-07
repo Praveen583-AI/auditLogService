@@ -57,13 +57,15 @@ public class ChainVerificationService {
         VerificationResult result = state.finish(boundary);
         if (result.status() == VerificationResult.Status.VALID) {
             LOGGER.info(
-                    "chain_verification_completed chainId={} status={} verifiedCount={}",
-                    chainId, result.status(), result.verifiedCount()
+                    "chain_verification_completed correlationId={} chainId={} status={} verifiedCount={}",
+                    OperationalLogContext.correlationId(), chainId,
+                    result.status(), result.verifiedCount()
             );
         } else {
             LOGGER.warn(
-                    "chain_verification_completed chainId={} status={} failureReason={} failureSequence={} verifiedCount={}",
-                    chainId, result.status(), result.failureReason(),
+                    "chain_verification_completed correlationId={} chainId={} status={} failureReason={} failureSequence={} verifiedCount={}",
+                    OperationalLogContext.correlationId(), chainId,
+                    result.status(), result.failureReason(),
                     result.failureSequence(), result.verifiedCount()
             );
         }
