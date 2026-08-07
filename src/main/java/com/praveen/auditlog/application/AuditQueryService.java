@@ -2,6 +2,9 @@ package com.praveen.auditlog.application;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.praveen.auditlog.privacy.RedactionService;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -23,15 +26,32 @@ public class AuditQueryService {
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;
     private final CursorCodec cursors;
+    private final RedactionService redactions;
 
     public AuditQueryService(
             JdbcTemplate jdbc,
             ObjectMapper objectMapper,
             CursorCodec cursors
     ) {
+        this(jdbc, objectMapper, cursors, (RedactionService) null);
+    }
+
+    @Autowired
+    public AuditQueryService(
+            JdbcTemplate jdbc,
+            ObjectMapper objectMapper,
+            CursorCodec cursors,
+            ObjectProvider<RedactionService> redactions
+    ) {
+        this(jdbc, objectMapper, cursors, redactions.getIfAvailable());
+    }
+
+    private AuditQueryService(JdbcTemplate jdbc, ObjectMapper objectMapper,
+                              CursorCodec cursors, RedactionService redactions) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
         this.cursors = cursors;
+        this.redactions = redactions;
     }
 
     public Page search(
@@ -71,7 +91,8 @@ public class AuditQueryService {
                         result.getString("resource_id"),
                         result.getTimestamp("occurred_at").toInstant(),
                         result.getTimestamp("recorded_at").toInstant(),
-                        readJson(result.getString("payload")),
+                        visiblePayload(tenantId, result.getObject("event_id", UUID.class),
+                                readJson(result.getString("payload"))),
                         HexFormat.of().formatHex(result.getBytes("content_hash"))
                 ),
                 query.arguments().toArray()
@@ -221,6 +242,10 @@ public class AuditQueryService {
         } catch (Exception error) {
             throw new IllegalStateException("Stored event payload is invalid", error);
         }
+    }
+
+    private JsonNode visiblePayload(String tenantId, UUID eventId, JsonNode payload) {
+        return redactions == null ? payload : redactions.apply(tenantId, eventId, payload);
     }
 
     private record Query(String sql, List<Object> arguments) {

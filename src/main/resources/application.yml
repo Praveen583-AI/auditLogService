@@ -1,4 +1,6 @@
 audit:
+  privacy:
+    enabled: false
   security:
     enabled: true
     issuer-uri: ${AUDIT_JWT_ISSUER_URI}
