@@ -22,6 +22,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 
 @Testcontainers
@@ -77,6 +78,22 @@ class ChainVerificationIntegrationTest {
         assertThat(result.verifiedCount()).isEqualTo(3);
         assertThat(result.firstSequence()).isEqualTo(1);
         assertThat(result.lastVerifiedSequence()).isEqualTo(3);
+    }
+
+    @Test
+    void crossTenantChainIsRejectedAsNotFound() {
+        given(contextProvider.currentContext()).willReturn(
+                new AuditRequestContext(
+                        "another-tenant",
+                        "producer-2",
+                        "actor-2",
+                        "USER",
+                        "VERIFIED_JWT"
+                )
+        );
+
+        assertThatThrownBy(() -> verification.verify(CHAIN_ID))
+                .isInstanceOf(ChainNotFoundException.class);
     }
 
     @Test

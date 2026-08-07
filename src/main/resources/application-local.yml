@@ -1,0 +1,10 @@
+# Local-development example only. Contains no credentials or reusable secrets.
+# Activate explicitly with: SPRING_PROFILES_ACTIVE=local
+audit:
+  security:
+    enabled: false
+  local-identity:
+    tenant-id: local-demo-tenant
+    producer-id: local-demo-producer
+    actor-id: local-developer
+    actor-type: DEVELOPER

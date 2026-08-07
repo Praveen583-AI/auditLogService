@@ -1,3 +1,8 @@
+audit:
+  security:
+    enabled: true
+    issuer-uri: ${AUDIT_JWT_ISSUER_URI}
+
 spring:
   jackson:
     deserialization:
