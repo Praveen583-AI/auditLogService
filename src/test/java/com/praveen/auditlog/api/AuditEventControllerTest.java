@@ -1,8 +1,10 @@
 package com.praveen.auditlog.api;
 
 import com.praveen.auditlog.api.dto.AuditEventResponse;
+import com.praveen.auditlog.application.ChainVerificationService;
 import com.praveen.auditlog.application.CreateAuditEventResult;
 import com.praveen.auditlog.application.CreateAuditEventUseCase;
+import com.praveen.auditlog.application.VerificationResult;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -19,6 +21,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -37,6 +40,9 @@ class AuditEventControllerTest {
 
     @MockitoBean
     private CreateAuditEventUseCase createAuditEvent;
+
+    @MockitoBean
+    private ChainVerificationService chainVerification;
 
     @Test
     void invalidRequestReturns400WithSafeViolations() throws Exception {
@@ -105,6 +111,27 @@ class AuditEventControllerTest {
                 .andExpect(content().string(not(containsString("select *"))))
                 .andExpect(content().string(not(containsString("RuntimeException"))))
                 .andExpect(content().string(not(containsString("stackTrace"))));
+    }
+
+    @Test
+    void completedInvalidVerificationReturns200WithReason() throws Exception {
+        given(chainVerification.verify("tenant:tenant-1")).willReturn(
+                VerificationResult.invalid(
+                        VerificationResult.FailureReason.CONTENT_HASH_MISMATCH,
+                        2, 1, 1L, 1L,
+                        "The stored content hash does not match the recalculated hash."
+                )
+        );
+
+        mockMvc.perform(get(
+                        PATH + "/chains/tenant:tenant-1/verification"
+                ))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("INVALID"))
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.failureReason")
+                        .value("CONTENT_HASH_MISMATCH"))
+                .andExpect(jsonPath("$.failureSequence").value(2));
     }
 
     @Test

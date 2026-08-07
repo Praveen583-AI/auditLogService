@@ -1,5 +1,7 @@
 package com.praveen.auditlog.api;
 
+import com.praveen.auditlog.application.ChainNotFoundException;
+
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +56,20 @@ public final class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 "INVALID_REQUEST",
                 "The request is invalid.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(ChainNotFoundException.class)
+    public ResponseEntity<ApiError> chainNotFound(
+            ChainNotFoundException ignored,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.NOT_FOUND,
+                "CHAIN_NOT_FOUND",
+                "The audit chain was not found.",
                 correlationId(request),
                 List.of()
         );
