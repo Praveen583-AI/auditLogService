@@ -6,6 +6,7 @@ import com.praveen.auditlog.application.AuditEventSpecification;
 import com.praveen.auditlog.application.AuditQueryService;
 import com.praveen.auditlog.application.AuditRequestContextProvider;
 import com.praveen.auditlog.security.ActorContext;
+import com.praveen.auditlog.security.AuthorizationPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,7 @@ class PrivacyIntegrationTest {
     @Autowired JdbcTemplate jdbc; @Autowired RedactionService redactions; @Autowired ExportService exports;
     @Autowired AuditQueryService queries; @Autowired ObjectMapper json;
     @MockitoBean AuditRequestContextProvider contextProvider;
+    @MockitoBean AuthorizationPolicy authorizationPolicy;
 
     @BeforeEach void setUp(){
         jdbc.execute("TRUNCATE export_access_action,export_job,redaction_record,idempotency_record,audit_event,chain_head CASCADE");
