@@ -14,11 +14,11 @@ public class AuditWriteService implements CreateAuditEventUseCase {
             LoggerFactory.getLogger(AuditWriteService.class);
 
     private final TransactionalAuditAppender appender;
-    private final AppendRetryPolicy retryPolicy;
+    private final RetryPolicy retryPolicy;
 
     public AuditWriteService(
             TransactionalAuditAppender appender,
-            AppendRetryPolicy retryPolicy
+            RetryPolicy retryPolicy
     ) {
         this.appender = appender;
         this.retryPolicy = retryPolicy;

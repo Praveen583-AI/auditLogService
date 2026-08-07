@@ -23,8 +23,8 @@ class AuditWriteFailureMappingTest {
 
     private final TransactionalAuditAppender appender =
             mock(TransactionalAuditAppender.class);
-    private final AppendRetryPolicy retryPolicy =
-            mock(AppendRetryPolicy.class);
+    private final RetryPolicy retryPolicy =
+            mock(RetryPolicy.class);
     private final AuditWriteService service =
             new AuditWriteService(appender, retryPolicy);
 

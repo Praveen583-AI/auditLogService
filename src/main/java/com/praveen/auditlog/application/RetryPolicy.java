@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
 @Component
-public class AppendRetryPolicy {
+public class RetryPolicy {
 
     private static final int MAX_ATTEMPTS = 3;
 

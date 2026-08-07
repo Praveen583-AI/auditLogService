@@ -95,7 +95,7 @@ public final class GlobalExceptionHandler {
     ) {
         String correlationId = correlationId(request);
         LOGGER.warn(
-                "audit_request_rejected status={} code={} correlationId={} violationCount=0",
+                "audit_request_rejected status={} code={} correlationId={} violationCount=0 retryableByClient=true",
                 HttpStatus.SERVICE_UNAVAILABLE.value(),
                 "CHAIN_BUSY", correlationId
         );
@@ -115,13 +115,21 @@ public final class GlobalExceptionHandler {
             TemporaryDatabaseFailureException ignored,
             HttpServletRequest request
     ) {
-        return response(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "TEMPORARY_DATABASE_FAILURE",
-                "Audit storage is temporarily unavailable.",
-                correlationId(request),
-                List.of()
+        String correlationId = correlationId(request);
+        LOGGER.error(
+                "audit_request_failed status={} code={} correlationId={} violationCount=0 retryableByClient=true",
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "TEMPORARY_DATABASE_FAILURE", correlationId
         );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .header("Retry-After", "1")
+                .header(CORRELATION_HEADER, correlationId)
+                .body(new ApiError(
+                        "TEMPORARY_DATABASE_FAILURE",
+                        "Audit storage is temporarily unavailable.",
+                        correlationId,
+                        List.of()
+                ));
     }
 
     @ExceptionHandler(ChainNotFoundException.class)

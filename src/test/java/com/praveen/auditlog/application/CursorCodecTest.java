@@ -20,7 +20,8 @@ class CursorCodecTest {
 
     @Test
     void malformedBase64HasDistinctOutcome() {
-        assertThatThrownBy(() -> codec.decode("%%%not-base64%%%"))
+        String rawCursor = "%%%not-base64%%%";
+        assertThatThrownBy(() -> codec.decode(rawCursor))
                 .isInstanceOfSatisfying(
                         InvalidCursorException.class,
                         error -> org.assertj.core.api.Assertions.assertThat(
@@ -28,7 +29,8 @@ class CursorCodecTest {
                         ).isEqualTo(
                                 InvalidCursorException.Reason.MALFORMED
                         )
-                );
+                )
+                .hasMessageNotContaining(rawCursor);
     }
 
     @Test
@@ -85,7 +87,8 @@ class CursorCodecTest {
                         ).isEqualTo(
                                 InvalidCursorException.Reason.VERSION_UNSUPPORTED
                         )
-                );
+                )
+                .hasMessageNotContaining(encoded);
     }
 
     private AuditEventSpecification specification() {

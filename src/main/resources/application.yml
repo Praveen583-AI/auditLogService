@@ -1,0 +1,18 @@
+spring:
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+
+server:
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+
+logging:
+  level:
+    root: INFO
+    org.springframework.jdbc.core: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} level=%-5level correlationId=%X{correlationId:-unavailable} logger=%logger{36} message=%msg%n"
