@@ -78,3 +78,14 @@ COMMENT ON TABLE archive_manifest IS 'Immutable signed evidence for one contiguo
 COMMENT ON TABLE archive_lifecycle_action IS 'Append-only operational history of each archive transition.';
 COMMENT ON TABLE legal_hold_action IS 'Append-only legal-hold actions; the latest action determines effective state.';
 
+REVOKE ALL ON TABLE archive_manifest, archive_lifecycle_action,
+    legal_hold_action FROM PUBLIC;
+GRANT SELECT ON TABLE archive_manifest TO audit_app, audit_verifier,
+    audit_maintenance;
+GRANT SELECT, INSERT ON TABLE archive_lifecycle_action,
+    legal_hold_action TO audit_maintenance;
+GRANT INSERT ON TABLE archive_manifest TO audit_maintenance;
+REVOKE UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+    ON TABLE archive_manifest, archive_lifecycle_action,
+    legal_hold_action FROM audit_app, audit_verifier, audit_maintenance;
+

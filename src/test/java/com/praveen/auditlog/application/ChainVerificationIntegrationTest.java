@@ -1,3 +1,4 @@
+
 package com.praveen.auditlog.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,11 +16,22 @@ import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
+import java.util.Base64;
+
+import com.praveen.auditlog.retention.ArchiveManifest;
+import com.praveen.auditlog.retention.FileArchiveStore;
+import com.praveen.auditlog.retention.RetentionService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,6 +43,7 @@ import static org.mockito.BDDMockito.given;
 class ChainVerificationIntegrationTest {
 
     private static final String CHAIN_ID = "tenant:verification-tenant";
+    private static final Path ARCHIVE_DIRECTORY = archiveDirectory();
 
     @Container
     @ServiceConnection
@@ -49,12 +62,32 @@ class ChainVerificationIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private RetentionService retention;
+
+    @Autowired
+    private FileArchiveStore archiveStore;
+
     @MockitoBean
     private AuditRequestContextProvider contextProvider;
 
+    @DynamicPropertySource
+    static void archiveProperties(DynamicPropertyRegistry properties) {
+        properties.add("audit.archive.enabled", () -> "true");
+        properties.add("audit.archive.directory",
+                () -> ARCHIVE_DIRECTORY.toString());
+        properties.add("audit.archive.signing-key-id", () -> "integration-key-1");
+        properties.add("audit.archive.signing-key-base64", () ->
+                Base64.getEncoder().encodeToString(new byte[32]));
+    }
+
     @BeforeEach
     void setUp() throws Exception {
-        jdbc.execute("TRUNCATE idempotency_record, audit_event, chain_head CASCADE");
+        jdbc.execute("""
+                TRUNCATE archive_lifecycle_action, archive_manifest,
+                         legal_hold_action, idempotency_record,
+                         audit_event, chain_head CASCADE
+                """);
         given(contextProvider.currentContext()).willReturn(
                 new AuditRequestContext(
                         "verification-tenant",
@@ -78,6 +111,55 @@ class ChainVerificationIntegrationTest {
         assertThat(result.verifiedCount()).isEqualTo(3);
         assertThat(result.firstSequence()).isEqualTo(1);
         assertThat(result.lastVerifiedSequence()).isEqualTo(3);
+    }
+
+    @Test
+    void archivedRangeRemainsValidThroughProductionVerifier() {
+        ArchiveManifest manifest = retention.archive(
+                new RetentionService.ArchiveRequest(
+                        "verification-tenant", CHAIN_ID, 1, 2, "policy-7y"
+                )
+        );
+
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM audit_event WHERE chain_id = ?",
+                Long.class, CHAIN_ID)).isEqualTo(1L);
+        VerificationResult result = verification.verify(CHAIN_ID);
+
+        assertThat(result.status()).isEqualTo(VerificationResult.Status.VALID);
+        assertThat(result.verifiedCount()).isEqualTo(3);
+        assertThat(manifest.startSequence()).isEqualTo(1);
+        assertThat(manifest.endSequence()).isEqualTo(2);
+    }
+
+    @Test
+    void corruptedArchiveFailsWithArchiveSpecificReason() throws Exception {
+        ArchiveManifest manifest = retention.archive(
+                new RetentionService.ArchiveRequest(
+                        "verification-tenant", CHAIN_ID, 1, 2, "policy-7y"
+                )
+        );
+        RetentionService.ArchiveBundle stored = archiveStore.read(
+                manifest.storageLocation(), manifest.storageVersion()
+        );
+        ArrayList<RetentionService.ArchivedEvent> corrupted =
+                new ArrayList<>(stored.events());
+        corrupted.add(corrupted.get(0));
+        Files.write(
+                archiveStore.path(manifest.storageLocation()),
+                objectMapper.writeValueAsBytes(new RetentionService.ArchiveBundle(
+                        stored.formatVersion(), corrupted
+                )),
+                StandardOpenOption.TRUNCATE_EXISTING
+        );
+
+        VerificationResult result = verification.verify(CHAIN_ID);
+
+        assertThat(result.status()).isEqualTo(VerificationResult.Status.INVALID);
+        assertThat(result.failureReason()).isEqualTo(
+                VerificationResult.FailureReason.ARCHIVE_CHECKSUM_MISMATCH
+        );
+        assertThat(result.failureSequence()).isEqualTo(1);
     }
 
     @Test
@@ -182,4 +264,13 @@ class ChainVerificationIntegrationTest {
                 )
         );
     }
+
+    private static Path archiveDirectory() {
+        try {
+            return Files.createTempDirectory("audit-archive-integration-");
+        } catch (Exception error) {
+            throw new ExceptionInInitializerError(error);
+        }
+    }
 }
+

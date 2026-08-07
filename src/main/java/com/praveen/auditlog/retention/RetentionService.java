@@ -44,10 +44,14 @@ public final class RetentionService {
         ArchiveBundle bundle = new ArchiveBundle(BUNDLE_FORMAT_VERSION, range.events());
         byte[] checksum = checksum(bundle);
         UUID manifestId = UUID.randomUUID();
+        repository.appendAction(manifestId, LifecycleAction.SELECTED,
+                Instant.now(clock));
         String location = "archive/" + request.tenantId() + "/" + request.chainId()
                 + "/" + range.startSequence() + "-" + range.endSequence()
                 + "/" + manifestId;
         StoredObject stored = store.putIfAbsent(location, bundle);
+        repository.appendAction(manifestId, LifecycleAction.STORED,
+                Instant.now(clock));
 
         ArchiveBundle storedCopy = store.read(stored.location(), stored.version());
         if (!Arrays.equals(checksum, checksum(storedCopy))) {
@@ -55,6 +59,8 @@ public final class RetentionService {
                     Instant.now(clock));
             throw new ArchiveFailure(ArchiveFailureReason.BUNDLE_CHECKSUM_MISMATCH);
         }
+        repository.appendAction(manifestId, LifecycleAction.VERIFIED,
+                Instant.now(clock));
 
         Instant now = Instant.now(clock);
         ManifestDraft draft = new ManifestDraft(
@@ -129,6 +135,33 @@ public final class RetentionService {
                     manifest.endSequence() + 1);
         }
         return ArchiveVerification.valid(events.size(), manifest.endSequence(), expected);
+    }
+
+    public VerifiedArchive verifiedArchive(
+            ArchiveManifest manifest,
+            byte[] precedingActiveHash,
+            ArchivedEvent followingActiveEvent
+    ) {
+        ArchiveVerification verification = verify(
+                manifest, precedingActiveHash, followingActiveEvent
+        );
+        if (!verification.valid()) {
+            throw new ArchiveProofException(
+                    verification.reason(), verification.failureSequence()
+            );
+        }
+        ArchiveBundle bundle;
+        try {
+            bundle = store.read(
+                    manifest.storageLocation(), manifest.storageVersion()
+            );
+        } catch (RuntimeException missing) {
+            throw new ArchiveProofException(
+                    ArchiveFailureReason.ARCHIVE_OBJECT_MISSING,
+                    manifest.startSequence()
+            );
+        }
+        return new VerifiedArchive(manifest, bundle.events());
     }
 
     private void rejectLegalHold(ArchiveRequest request, ArchiveRange range) {
@@ -224,8 +257,17 @@ public final class RetentionService {
             return new ArchiveVerification(false, reason, sequence, 0, 0, new byte[32]);
         }
     }
+    public record VerifiedArchive(
+            ArchiveManifest manifest,
+            List<ArchivedEvent> events
+    ) {
+        public VerifiedArchive {
+            events = List.copyOf(events);
+        }
+    }
     public enum ArchiveFailureReason {
-        PARTIAL_OR_INVALID_RANGE, LEGAL_HOLD_ACTIVE, ARCHIVE_OBJECT_MISSING,
+        PARTIAL_OR_INVALID_RANGE, LEGAL_HOLD_ACTIVE, ARCHIVE_WRITE_FAILED,
+        ARCHIVE_OBJECT_MISSING,
         BUNDLE_CHECKSUM_MISMATCH, MANIFEST_SIGNATURE_INVALID,
         ARCHIVE_RANGE_INVALID, ARCHIVE_CHAIN_INVALID, ARCHIVE_BOUNDARY_MISMATCH
     }

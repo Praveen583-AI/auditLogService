@@ -1,9 +1,12 @@
+
 package com.praveen.auditlog.application;
 
 import com.praveen.auditlog.integrity.CanonicalizationException;
 import com.praveen.auditlog.integrity.CanonicalEventSerializer;
 import com.praveen.auditlog.integrity.HashService;
 import com.praveen.auditlog.persistence.ChainVerificationRepository;
+import com.praveen.auditlog.retention.ArchiveProofException;
+import com.praveen.auditlog.retention.RetentionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -46,9 +49,21 @@ public class ChainVerificationService {
         VerificationState state = new VerificationState(
                 hashes, serializer.version()
         );
-        ChainVerificationRepository.ChainBoundary boundary = repository.scan(
-                context.tenantId(), chainId, state::accept
-        );
+        final ChainVerificationRepository.ChainBoundary boundary;
+        try {
+            boundary = repository.scan(
+                    context.tenantId(), chainId, state::accept
+            );
+        } catch (ArchiveProofException failure) {
+            VerificationResult result = state.archiveFailure(failure);
+            LOGGER.warn(
+                    "chain_verification_completed correlationId={} chainId={} status={} failureReason={} failureSequence={} verifiedCount={}",
+                    OperationalLogContext.correlationId(), chainId,
+                    result.status(), result.failureReason(),
+                    result.failureSequence(), result.verifiedCount()
+            );
+            return result;
+        }
 
         if (!boundary.exists()) {
             throw new ChainNotFoundException();
@@ -221,5 +236,38 @@ public class ChainVerificationService {
                     verifiedCount, firstSequence, lastVerifiedSequence
             );
         }
+
+        VerificationResult archiveFailure(ArchiveProofException failure) {
+            VerificationResult.FailureReason reason = switch (failure.reason()) {
+                case ARCHIVE_OBJECT_MISSING, ARCHIVE_WRITE_FAILED ->
+                        VerificationResult.FailureReason.MISSING_ARCHIVE_PROOF;
+                case BUNDLE_CHECKSUM_MISMATCH ->
+                        VerificationResult.FailureReason.ARCHIVE_CHECKSUM_MISMATCH;
+                case MANIFEST_SIGNATURE_INVALID ->
+                        VerificationResult.FailureReason.ARCHIVE_SIGNATURE_INVALID;
+                case ARCHIVE_RANGE_INVALID, PARTIAL_OR_INVALID_RANGE ->
+                        VerificationResult.FailureReason.ARCHIVE_RANGE_INVALID;
+                case ARCHIVE_CHAIN_INVALID ->
+                        VerificationResult.FailureReason.ARCHIVE_CHAIN_INVALID;
+                case ARCHIVE_BOUNDARY_MISMATCH ->
+                        VerificationResult.FailureReason.ARCHIVE_BOUNDARY_MISMATCH;
+                case LEGAL_HOLD_ACTIVE ->
+                        VerificationResult.FailureReason.MISSING_ARCHIVE_PROOF;
+            };
+            if (failure.reason()
+                    == RetentionService.ArchiveFailureReason.ARCHIVE_OBJECT_MISSING) {
+                return VerificationResult.indeterminate(
+                        reason, failure.sequence(), verifiedCount,
+                        firstSequence, lastVerifiedSequence,
+                        "The archive proof is unavailable."
+                );
+            }
+            return VerificationResult.invalid(
+                    reason, failure.sequence(), verifiedCount,
+                    firstSequence, lastVerifiedSequence,
+                    "The archived audit evidence is invalid."
+            );
+        }
     }
 }
+
