@@ -62,7 +62,9 @@ public final class RetentionService {
         repository.appendAction(manifestId, LifecycleAction.VERIFIED,
                 Instant.now(clock));
 
-        Instant now = Instant.now(clock);
+        Instant now = Instant.now(clock).truncatedTo(
+                java.time.temporal.ChronoUnit.MICROS
+        );
         ManifestDraft draft = new ManifestDraft(
                 manifestId, request.tenantId(), request.chainId(),
                 range.startSequence(), range.endSequence(), range.events().size(),
