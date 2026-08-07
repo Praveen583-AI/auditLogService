@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.time.Instant;
 
 @Repository
-public final class JdbcChainHeadRepository implements ChainHeadRepository {
+public class JdbcChainHeadRepository implements ChainHeadRepository {
 
     private final JdbcTemplate jdbc;
 

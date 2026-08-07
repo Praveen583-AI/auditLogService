@@ -13,7 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public final class JdbcIdempotencyRepository implements IdempotencyRepository {
+public class JdbcIdempotencyRepository implements IdempotencyRepository {
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper objectMapper;

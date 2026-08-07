@@ -6,7 +6,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public final class JdbcAuditEventRepository implements AuditEventRepository {
+public class JdbcAuditEventRepository implements AuditEventRepository {
 
     private final JdbcTemplate jdbc;
 
