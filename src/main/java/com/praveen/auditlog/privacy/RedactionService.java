@@ -21,7 +21,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 
-public final class RedactionService {
+public class RedactionService {
     public static final String ALGORITHM = "HMAC-SHA256";
     private final JdbcTemplate jdbc; private final ObjectMapper json;
     private final CanonicalEventSerializer canonical; private final AuthorizationPolicy authorization;
