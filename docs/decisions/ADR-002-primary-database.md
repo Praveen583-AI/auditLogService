@@ -102,7 +102,12 @@ PostgreSQL does not make a table intrinsically append-only. The design therefore
 - Full-chain verification and protected chain-head state.
 - Controlled, monitored operational access.
 
-Privileges and triggers prevent ordinary mutation; hash verification detects modification within its documented trust boundary. A fully privileged actor who rewrites all records, internal anchors, and verification logic is outside the protection of an internal hash chain alone.
+Implemented database privileges prevent ordinary runtime mutation, and hash
+verification detects modification within its documented trust boundary. A
+blocking update/delete trigger and separately owned schema are recommended
+deployment layers, not installed by the prototype. A fully privileged actor who
+rewrites all records, internal anchors, and verification logic is outside the
+protection of an internal hash chain alone.
 
 ## Alternatives Reconsideration
 
