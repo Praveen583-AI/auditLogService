@@ -3,14 +3,9 @@ package com.praveen.auditlog.api;
 import java.util.List;
 
 /**
- * Stable public error representation. It deliberately excludes exception
- * names, stack traces, SQL details, credentials, request fingerprints, and
- * rejected values.
- *
- * @param code stable machine-readable error code
- * @param message safe human-readable summary
- * @param correlationId identifier for this individual API attempt
- * @param violations optional field-level violations
+ * Stable public error representation. It deliberately excludes exceptions,
+ * stack traces, SQL details, credentials, request fingerprints, and rejected
+ * values.
  */
 public record ApiError(
         String code,

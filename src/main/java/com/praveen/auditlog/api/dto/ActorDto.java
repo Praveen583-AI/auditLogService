@@ -1,13 +1,13 @@
 package com.praveen.auditlog.api.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 /**
  * Actor asserted by the authenticated producer.
- *
- * @param id stable actor identifier in the producer's domain
- * @param type actor category, such as USER or SERVICE
  */
 public record ActorDto(
-        String id,
-        String type
+        @NotBlank @Size(max = 255) String id,
+        @NotBlank @Size(max = 50) String type
 ) {
 }

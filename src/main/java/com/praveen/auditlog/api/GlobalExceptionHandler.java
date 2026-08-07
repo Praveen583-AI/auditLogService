@@ -1,178 +1,148 @@
 package com.praveen.auditlog.api;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
-/**
- * Framework-neutral public error mapping boundary.
- *
- * <p>The eventual HTTP framework adapter should delegate exception-specific
- * handling to these mappings and log internal detail separately against the
- * same correlation ID. This class intentionally has no Spring or Jakarta
- * dependency because the repository does not yet define an application
- * framework or build.</p>
- */
+import java.util.List;
+import java.util.UUID;
+import java.util.regex.Pattern;
+
+@RestControllerAdvice
 public final class GlobalExceptionHandler {
 
     public static final String CORRELATION_HEADER = "X-Correlation-Id";
-    public static final String RETRY_AFTER_HEADER = "Retry-After";
+    private static final Pattern SAFE_CORRELATION_ID =
+            Pattern.compile("^[A-Za-z0-9._-]{1,100}$");
 
-    public ErrorResponse invalidRequest(
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> validation(
+            MethodArgumentNotValidException exception,
+            HttpServletRequest request
+    ) {
+        List<ApiError.FieldViolation> violations = exception.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(this::safeViolation)
+                .toList();
+
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "The request is invalid.",
+                correlationId(request),
+                violations
+        );
+    }
+
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            ServletRequestBindingException.class
+    })
+    public ResponseEntity<ApiError> invalidRequest(
+            Exception ignored,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.BAD_REQUEST,
+                "INVALID_REQUEST",
+                "The request is invalid.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(IdempotencyKeyReusedException.class)
+    public ResponseEntity<ApiError> idempotencyConflict(
+            IdempotencyKeyReusedException ignored,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.CONFLICT,
+                "IDEMPOTENCY_KEY_REUSED",
+                "The Idempotency-Key has already been used with a different request.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler({
+            PayloadTooLargeException.class,
+            MaxUploadSizeExceededException.class
+    })
+    public ResponseEntity<ApiError> payloadTooLarge(
+            Exception ignored,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.PAYLOAD_TOO_LARGE,
+                "PAYLOAD_LIMIT_EXCEEDED",
+                "The request exceeds the permitted size.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> internalError(
+            Exception ignored,
+            HttpServletRequest request
+    ) {
+        return response(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "INTERNAL_ERROR",
+                "The request could not be completed.",
+                correlationId(request),
+                List.of()
+        );
+    }
+
+    private ApiError.FieldViolation safeViolation(FieldError error) {
+        return new ApiError.FieldViolation(
+                error.getField(),
+                violationCode(error.getCode()),
+                "The field is invalid."
+        );
+    }
+
+    private String violationCode(String validationCode) {
+        if ("NotNull".equals(validationCode) || "NotBlank".equals(validationCode)) {
+            return "REQUIRED";
+        }
+        if ("Size".equals(validationCode)) {
+            return "MAX_LENGTH_EXCEEDED";
+        }
+        if ("Pattern".equals(validationCode)) {
+            return "INVALID_FORMAT";
+        }
+        return "INVALID_VALUE";
+    }
+
+    private String correlationId(HttpServletRequest request) {
+        String supplied = request.getHeader(CORRELATION_HEADER);
+        if (supplied != null && SAFE_CORRELATION_ID.matcher(supplied).matches()) {
+            return supplied;
+        }
+        return UUID.randomUUID().toString();
+    }
+
+    private ResponseEntity<ApiError> response(
+            HttpStatus status,
+            String code,
+            String message,
             String correlationId,
             List<ApiError.FieldViolation> violations
     ) {
-        return response(
-                400,
-                "INVALID_REQUEST",
-                "The request is invalid.",
-                correlationId,
-                violations,
-                Map.of()
-        );
-    }
-
-    public ErrorResponse unauthenticated(String correlationId) {
-        return response(
-                401,
-                "UNAUTHENTICATED",
-                "Authentication is required.",
-                correlationId,
-                List.of(),
-                Map.of("WWW-Authenticate", "Bearer")
-        );
-    }
-
-    public ErrorResponse accessDenied(String correlationId) {
-        return response(
-                403,
-                "ACCESS_DENIED",
-                "You are not permitted to perform this operation.",
-                correlationId,
-                List.of(),
-                Map.of()
-        );
-    }
-
-    public ErrorResponse chainNotFound(String correlationId) {
-        return response(
-                404,
-                "CHAIN_NOT_FOUND",
-                "The requested chain was not found.",
-                correlationId,
-                List.of(),
-                Map.of()
-        );
-    }
-
-    public ErrorResponse idempotencyKeyReused(String correlationId) {
-        return response(
-                409,
-                "IDEMPOTENCY_KEY_REUSED",
-                "The Idempotency-Key has already been used with a different request.",
-                correlationId,
-                List.of(),
-                Map.of()
-        );
-    }
-
-    public ErrorResponse payloadTooLarge(String correlationId) {
-        return response(
-                413,
-                "PAYLOAD_LIMIT_EXCEEDED",
-                "The request exceeds the permitted size.",
-                correlationId,
-                List.of(),
-                Map.of()
-        );
-    }
-
-    public ErrorResponse rateLimited(String correlationId, int retryAfterSeconds) {
-        return retryable(
-                429,
-                "RATE_LIMIT_EXCEEDED",
-                "Too many requests.",
-                correlationId,
-                retryAfterSeconds
-        );
-    }
-
-    public ErrorResponse appendTemporarilyUnavailable(
-            String correlationId,
-            int retryAfterSeconds
-    ) {
-        return retryable(
-                503,
-                "APPEND_TEMPORARILY_UNAVAILABLE",
-                "The event could not be appended at this time.",
-                correlationId,
-                retryAfterSeconds
-        );
-    }
-
-    public ErrorResponse dependencyTemporarilyUnavailable(
-            String correlationId,
-            int retryAfterSeconds
-    ) {
-        return retryable(
-                503,
-                "DEPENDENCY_TEMPORARILY_UNAVAILABLE",
-                "The request could not be completed at this time.",
-                correlationId,
-                retryAfterSeconds
-        );
-    }
-
-    public ErrorResponse internalError(String correlationId) {
-        return response(
-                500,
-                "INTERNAL_ERROR",
-                "The request could not be completed.",
-                correlationId,
-                List.of(),
-                Map.of()
-        );
-    }
-
-    private ErrorResponse retryable(
-            int status,
-            String code,
-            String message,
-            String correlationId,
-            int retryAfterSeconds
-    ) {
-        if (retryAfterSeconds < 0) {
-            throw new IllegalArgumentException("retryAfterSeconds must not be negative");
-        }
-        return response(
-                status,
-                code,
-                message,
-                correlationId,
-                List.of(),
-                Map.of(RETRY_AFTER_HEADER, Integer.toString(retryAfterSeconds))
-        );
-    }
-
-    private ErrorResponse response(
-            int status,
-            String code,
-            String message,
-            String correlationId,
-            List<ApiError.FieldViolation> violations,
-            Map<String, String> additionalHeaders
-    ) {
-        Objects.requireNonNull(correlationId, "correlationId");
         ApiError body = new ApiError(code, message, correlationId, violations);
-        Map<String, String> headers = new java.util.HashMap<>(additionalHeaders);
-        headers.put(CORRELATION_HEADER, correlationId);
-        return new ErrorResponse(status, Map.copyOf(headers), body);
-    }
-
-    public record ErrorResponse(
-            int status,
-            Map<String, String> headers,
-            ApiError body
-    ) {
+        return ResponseEntity.status(status)
+                .header(CORRELATION_HEADER, correlationId)
+                .body(body);
     }
 }
