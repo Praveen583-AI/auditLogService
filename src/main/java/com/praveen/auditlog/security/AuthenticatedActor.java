@@ -5,6 +5,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -14,7 +16,9 @@ public record AuthenticatedActor(
         String actorId,
         String actorType,
         String identitySource,
-        Set<String> authorities
+        Set<String> authorities,
+        Set<String> permittedTenantIds,
+        Set<String> permittedResourceTypes
 ) {
     public AuthenticatedActor {
         tenantId = required(tenantId, "tenantId");
@@ -23,6 +27,8 @@ public record AuthenticatedActor(
         actorType = required(actorType, "actorType");
         identitySource = required(identitySource, "identitySource");
         authorities = Set.copyOf(authorities);
+        permittedTenantIds = Set.copyOf(permittedTenantIds);
+        permittedResourceTypes = Set.copyOf(permittedResourceTypes);
     }
 
     public static AuthenticatedActor from(Authentication authentication) {
@@ -41,6 +47,8 @@ public record AuthenticatedActor(
         Set<String> authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toUnmodifiableSet());
+        Set<String> tenants = new HashSet<>(claimStrings(jwt, "tenant_ids"));
+        tenants.add(tenantId);
 
         return new AuthenticatedActor(
                 tenantId,
@@ -48,7 +56,30 @@ public record AuthenticatedActor(
                 required(jwt.getSubject(), "sub"),
                 actorType,
                 "VERIFIED_JWT",
-                authorities
+                authorities,
+                tenants,
+                claimStrings(jwt, "resource_types")
+        );
+    }
+
+    public ActorContext toActorContext() {
+        Set<ActorContext.Role> roles = authorities.stream()
+                .filter(authority -> authority.startsWith("ROLE_"))
+                .map(authority -> authority.substring("ROLE_".length()))
+                .flatMap(value -> {
+                    try {
+                        return java.util.stream.Stream.of(
+                                ActorContext.Role.valueOf(value)
+                        );
+                    } catch (IllegalArgumentException ignored) {
+                        return java.util.stream.Stream.empty();
+                    }
+                })
+                .collect(Collectors.toUnmodifiableSet());
+
+        return new ActorContext(
+                tenantId, producerId, actorId, actorType, identitySource,
+                roles, permittedTenantIds, permittedResourceTypes
         );
     }
 
@@ -56,6 +87,18 @@ public record AuthenticatedActor(
         return new AuditRequestContext(
                 tenantId, producerId, actorId, actorType, identitySource
         );
+    }
+
+    private static Set<String> claimStrings(Jwt jwt, String claimName) {
+        Object value = jwt.getClaim(claimName);
+        if (!(value instanceof Collection<?> values)) {
+            return Set.of();
+        }
+        return values.stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .filter(item -> !item.isBlank())
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     private static String firstPresent(String... values) {
@@ -73,7 +116,9 @@ public record AuthenticatedActor(
 
     private static String required(String value, String claim) {
         if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Required trusted identity claim is missing: " + claim);
+            throw new IllegalStateException(
+                    "Required trusted identity claim is missing: " + claim
+            );
         }
         return value;
     }

@@ -82,6 +82,30 @@ class AuditWriteServiceIntegrationTest {
     }
 
     @Test
+    void trustedTenantAndActorOverrideProducerSuppliedIdentity() throws Exception {
+        CreateAuditEventRequest spoofed = new CreateAuditEventRequest(
+                "ACCOUNT_UPDATED",
+                1,
+                Instant.parse("2026-08-07T14:30:12.123Z"),
+                new ActorDto("spoofed-actor", "ADMIN"),
+                new ResourceDto("ACCOUNT", "account-1"),
+                objectMapper.readTree("{\"result\":\"accepted\"}")
+        );
+
+        service.create("trusted-context-key", spoofed);
+
+        var stored = jdbc.queryForMap("""
+                SELECT tenant_id, actor_id, actor_type
+                FROM audit_event
+                WHERE chain_id = 'tenant:tenant-1'
+                """);
+        assertThat(stored)
+                .containsEntry("tenant_id", "tenant-1")
+                .containsEntry("actor_id", "actor-1")
+                .containsEntry("actor_type", "USER");
+    }
+
+    @Test
     void failedChainHeadUpdateRollsBackEventHeadAndIdempotency() throws Exception {
         jdbc.execute("""
                 CREATE FUNCTION force_chain_head_failure()
