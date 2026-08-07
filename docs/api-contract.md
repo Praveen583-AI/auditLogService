@@ -65,7 +65,7 @@ A first successful append returns:
 HTTP/1.1 201 Created
 Location: /v1/audit/events/018f...
 Idempotency-Replayed: false
-X-Request-Id: 7c28...
+X-Correlation-Id: 7c28...
 ```
 
 ```json
@@ -90,7 +90,7 @@ The idempotency scope is:
 (authenticatedTenantId, authenticatedProducerId, operation, hash(Idempotency-Key))
 ```
 
-The request fingerprint covers all normalized caller-controlled event semantics plus the trusted tenant and producer scope. It does not cover JSON formatting, transport request ID, authentication-token bytes, the idempotency key itself, or server-assigned event fields.
+The request fingerprint covers all normalized caller-controlled event semantics plus the trusted tenant and producer scope. It does not cover JSON formatting, transport correlation ID, authentication-token bytes, the idempotency key itself, or server-assigned event fields.
 
 | Situation | Behavior | Status |
 |---|---|---:|
@@ -110,8 +110,8 @@ Errors use a stable, non-sensitive shape:
 {
   "code": "IDEMPOTENCY_KEY_REUSED",
   "message": "The Idempotency-Key has already been used with a different request.",
-  "requestId": "7c28...",
-  "field": null
+  "correlationId": "7c28...",
+  "violations": []
 }
 ```
 

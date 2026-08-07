@@ -24,7 +24,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AppendAuditEventRequest'
+              $ref: '#/components/schemas/CreateAuditEventRequest'
             examples:
               accountUpdated:
                 value:
@@ -48,12 +48,12 @@ paths:
               $ref: '#/components/headers/Location'
             Idempotency-Replayed:
               $ref: '#/components/headers/IdempotencyReplayed'
-            X-Request-Id:
-              $ref: '#/components/headers/RequestId'
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppendAuditEventResponse'
+                $ref: '#/components/schemas/AuditEventResponse'
         '200':
           description: Exact idempotent replay; the original receipt is returned.
           headers:
@@ -64,12 +64,12 @@ paths:
               schema:
                 type: boolean
                 const: true
-            X-Request-Id:
-              $ref: '#/components/headers/RequestId'
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AppendAuditEventResponse'
+                $ref: '#/components/schemas/AuditEventResponse'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -106,12 +106,12 @@ components:
       description: True when the response replays a previously committed result.
       schema:
         type: boolean
-    RequestId:
+    CorrelationId:
       description: Identifier for this API attempt, used for troubleshooting.
       schema:
         type: string
   schemas:
-    AppendAuditEventRequest:
+    CreateAuditEventRequest:
       type: object
       additionalProperties: false
       required:
@@ -171,7 +171,7 @@ components:
           type: string
           minLength: 1
           maxLength: 255
-    AppendAuditEventResponse:
+    AuditEventResponse:
       type: object
       additionalProperties: false
       required:
@@ -213,18 +213,33 @@ components:
       required:
         - code
         - message
-        - requestId
+        - correlationId
+        - violations
       properties:
         code:
           type: string
         message:
           type: string
-        requestId:
+        correlationId:
           type: string
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldViolation'
+    FieldViolation:
+      type: object
+      additionalProperties: false
+      required:
+        - field
+        - code
+        - message
+      properties:
         field:
-          type:
-            - string
-            - 'null'
+          type: string
+        code:
+          type: string
+        message:
+          type: string
   responses:
     BadRequest:
       description: Malformed request, missing idempotency key, or invalid field syntax.
