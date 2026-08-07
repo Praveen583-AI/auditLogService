@@ -85,7 +85,8 @@ public class JdbcRetentionRepository
                 INSERT INTO archive_lifecycle_action (
                     action_id, manifest_id, action_type, recorded_at, details
                 ) VALUES (?, ?, ?, ?, '{}'::jsonb)
-                """, UUID.randomUUID(), manifestId, action.name(), at);
+                """, UUID.randomUUID(), manifestId, action.name(),
+                java.sql.Timestamp.from(at));
     }
 
     @Override
@@ -162,9 +163,10 @@ public class JdbcRetentionRepository
                 m.startSequence(), m.endSequence(), m.recordCount(),
                 m.predecessorHash(), m.firstEventHash(), m.lastEventHash(),
                 m.bundleChecksum(), m.checksumAlgorithm(), m.bundleFormatVersion(),
-                m.policyId(), m.archivedAt(), m.storageLocation(), m.storageVersion(),
+                m.policyId(), java.sql.Timestamp.from(m.archivedAt()),
+                m.storageLocation(), m.storageVersion(),
                 m.signatureAlgorithm(), m.signingKeyId(), m.signatureVersion(),
-                m.signedAt(), m.signature());
+                java.sql.Timestamp.from(m.signedAt()), m.signature());
     }
 
     private RetentionService.ArchivedEvent mapEvent(ResultSet rows, int ignored)
