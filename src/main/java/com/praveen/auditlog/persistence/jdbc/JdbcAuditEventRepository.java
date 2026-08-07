@@ -5,6 +5,8 @@ import com.praveen.auditlog.persistence.AuditEventRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Timestamp;
+
 @Repository
 public class JdbcAuditEventRepository implements AuditEventRepository {
 
@@ -32,8 +34,8 @@ public class JdbcAuditEventRepository implements AuditEventRepository {
                 event.sequenceNumber(), event.eventType(),
                 event.eventSchemaVersion(), event.producerId(), event.actorId(),
                 event.actorType(), event.actorIdentitySource(),
-                event.resourceType(), event.resourceId(), event.occurredAt(),
-                event.recordedAt(), event.payload().toString(),
+                event.resourceType(), event.resourceId(), Timestamp.from(event.occurredAt()),
+                Timestamp.from(event.recordedAt()), event.payload().toString(),
                 event.previousHash(), contentHash, event.hashAlgorithm(),
                 event.canonicalizationVersion()
         );

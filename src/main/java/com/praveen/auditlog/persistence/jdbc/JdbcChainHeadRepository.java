@@ -4,6 +4,7 @@ import com.praveen.auditlog.persistence.ChainHeadRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 
 @Repository
@@ -28,7 +29,7 @@ public class JdbcChainHeadRepository implements ChainHeadRepository {
                     version, updated_at
                 ) VALUES (?, ?, 0, ?, 0, ?)
                 ON CONFLICT (chain_id) DO NOTHING
-                """, chainId, tenantId, genesisHash, initializedAt);
+                """, chainId, tenantId, genesisHash, Timestamp.from(initializedAt));
 
         return jdbc.queryForObject("""
                 SELECT chain_id, tenant_id, latest_sequence, latest_hash, version
@@ -63,7 +64,7 @@ public class JdbcChainHeadRepository implements ChainHeadRepository {
                   AND latest_hash = ?
                   AND version = ?
                 """,
-                nextSequence, nextHash, updatedAt, expected.chainId(),
+                nextSequence, nextHash, Timestamp.from(updatedAt), expected.chainId(),
                 expected.tenantId(), expected.latestSequence(),
                 expected.latestHash(), expected.version()
         );

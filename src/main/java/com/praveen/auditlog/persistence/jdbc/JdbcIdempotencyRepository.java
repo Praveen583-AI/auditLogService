@@ -7,6 +7,7 @@ import com.praveen.auditlog.persistence.IdempotencyRepository;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -45,7 +46,8 @@ public class JdbcIdempotencyRepository implements IdempotencyRepository {
                 ) DO NOTHING
                 """,
                 id, tenantId, producerId, operation, keyHash,
-                requestFingerprint, createdAt, createdAt, expiresAt
+                requestFingerprint, Timestamp.from(createdAt), Timestamp.from(createdAt),
+                Timestamp.from(expiresAt)
         ) == 1;
     }
 
@@ -84,7 +86,7 @@ public class JdbcIdempotencyRepository implements IdempotencyRepository {
                 WHERE idempotency_id = ?
                   AND status = 'PROCESSING'
                 """,
-                response.eventId(), writeResponse(response), completedAt, id
+                response.eventId(), writeResponse(response), Timestamp.from(completedAt), id
         );
         if (rows != 1) {
             throw new IllegalStateException("Idempotency completion affected " + rows + " rows");
