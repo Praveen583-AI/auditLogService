@@ -1,5 +1,6 @@
 package com.praveen.auditlog.api.dto;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -8,14 +9,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
-import java.util.Map;
 
 /**
  * Caller-controlled fields for POST /v1/audit/events.
  *
- * <p>Request-byte, JSON-depth, collection-size, and canonicalization limits
- * must be enforced by the bounded JSON input policy in addition to these
- * envelope constraints.</p>
+ * <p>Request-byte, JSON-depth, collection-size, duplicate-key, and
+ * canonicalization limits must be enforced by the bounded JSON input policy in
+ * addition to these envelope constraints.</p>
  */
 public record CreateAuditEventRequest(
         @NotBlank
@@ -38,6 +38,6 @@ public record CreateAuditEventRequest(
         ResourceDto resource,
 
         @NotNull
-        Map<String, Object> payload
+        JsonNode payload
 ) {
 }
