@@ -95,9 +95,9 @@ public class JdbcRetentionRepository
             RetentionService.ArchiveRequest request
     ) {
         jdbc.execute("LOCK TABLE legal_hold_action IN SHARE MODE");
-        jdbc.queryForObject(
+        jdbc.query(
                 "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                Long.class, request.chainId()
+                result -> null, request.chainId()
         );
         if (hasEffectiveLegalHold(request.tenantId(), request.chainId(),
                 request.startSequence(), request.endSequence())) {
