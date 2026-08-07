@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.praveen.auditlog.application.AuditEventSpecification;
 import com.praveen.auditlog.application.AuditQueryService;
+import com.praveen.auditlog.application.AuditRequestContextProvider;
 import com.praveen.auditlog.security.ActorContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -47,6 +49,7 @@ class PrivacyIntegrationTest {
     }
     @Autowired JdbcTemplate jdbc; @Autowired RedactionService redactions; @Autowired ExportService exports;
     @Autowired AuditQueryService queries; @Autowired ObjectMapper json;
+    @MockitoBean AuditRequestContextProvider contextProvider;
 
     @BeforeEach void setUp(){
         jdbc.execute("TRUNCATE export_access_action,export_job,redaction_record,idempotency_record,audit_event,chain_head CASCADE");
