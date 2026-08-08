@@ -174,7 +174,7 @@ database and does not alter the Compose database.
 | [`src/main/java`](src/main/java/) | HTTP, application, integrity, persistence, security, retention, and privacy modules. |
 | [`src/test/java`](src/test/java/) | Unit, integration, authorization, concurrency, lifecycle, and tamper tests. |
 | [`db/migration`](db/migration/) | Versioned Flyway schema, database roles, lifecycle tables, and query indexes. |
-| [`openapi`](openapi/) | Versioned append API contract. Search and verification behavior are documented separately. |
+| [`openapi`](openapi/) | Executable public contract for implemented append, search, and synchronous verification operations. |
 | [`docs`](docs/) | Requirements, architecture, decisions, security, evidence, and review material. |
 | [`scripts`](scripts/) | Repeatable tamper demonstration and performance/query-plan utilities. |
 | [`dashboards`](dashboards/) | Operational metric and query notes. |
@@ -189,7 +189,7 @@ database and does not alter the Compose database.
   [domain model](docs/diagrams/domain-model.md), and
   [architecture decisions](docs/decisions/).
 - [API contract](docs/api-contract.md) and
-  [OpenAPI append contract](openapi/audit-api.yaml).
+  [OpenAPI public API contract](openapi/audit-api.yaml).
 - [Integrity design](docs/integrity-design.md),
   [verification behavior](docs/verification.md), and
   [data storage](docs/data-storage.md).

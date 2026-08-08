@@ -2,7 +2,10 @@ openapi: 3.1.0
 info:
   title: Audit Log API
   version: 1.0.0
-  description: Prototype contract for appending tamper-evident audit events.
+  description: |
+    Executable contract for the prototype's implemented public audit-event
+    append, search, and synchronous chain-verification operations. Proposed
+    export and asynchronous job APIs are intentionally excluded.
 servers:
   - url: /
 paths:
@@ -11,10 +14,16 @@ paths:
       operationId: appendAuditEvent
       summary: Append an audit event
       description: |
-        Atomically appends an event to the authenticated tenant's chain.
+        Atomically appends an event to the authenticated tenant's chain. The
+        authenticated context, rather than request data, supplies tenant,
+        producer, and persisted actor identity. The actor object remains a
+        required compatibility field in the current request DTO but cannot
+        override the authenticated actor.
+
         A first successful request returns 201. An exact idempotent replay
-        returns the original receipt with 200. Reuse of the same scoped key
-        for different request semantics returns 409.
+        returns the original receipt with 200 and does not create another
+        event. Reusing the same scoped key for different request semantics
+        returns 409.
       security:
         - bearerAuth: []
       parameters:
@@ -32,7 +41,7 @@ paths:
                   eventSchemaVersion: 1
                   occurredAt: '2026-08-07T14:30:12.123Z'
                   actor:
-                    id: employee-42
+                    id: caller-supplied-actor
                     type: USER
                   resource:
                     type: ACCOUNT
@@ -42,34 +51,41 @@ paths:
                       - address
       responses:
         '201':
-          description: Event created and durably appended.
+          description: A new event was durably appended.
           headers:
             Location:
               $ref: '#/components/headers/Location'
             Idempotency-Replayed:
-              $ref: '#/components/headers/IdempotencyReplayed'
+              description: False because this request created the event.
+              schema:
+                type: string
+                const: 'false'
             X-Correlation-Id:
               $ref: '#/components/headers/CorrelationId'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditEventResponse'
+              examples:
+                created:
+                  $ref: '#/components/examples/CreatedReceipt'
         '200':
-          description: Exact idempotent replay; the original receipt is returned.
+          description: Exact idempotent replay; the original receipt is returned without creating another event.
           headers:
-            Location:
-              $ref: '#/components/headers/Location'
             Idempotency-Replayed:
-              description: Always true for this response.
+              description: True because this is an exact replay.
               schema:
-                type: boolean
-                const: true
+                type: string
+                const: 'true'
             X-Correlation-Id:
               $ref: '#/components/headers/CorrelationId'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuditEventResponse'
+              examples:
+                exactReplay:
+                  $ref: '#/components/examples/ReplayedReceipt'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -77,9 +93,177 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
-          $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/UnprocessableEntity'
+          $ref: '#/components/responses/IdempotencyConflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+    get:
+      operationId: searchAuditEvents
+      summary: Search visible audit events
+      description: |
+        Searches only the authenticated tenant. All supplied filters are
+        combined with logical AND. `from` is inclusive and `to` is exclusive.
+        `resourceId` requires `resourceType`.
+
+        With `chainId`, results are ordered by `sequenceNumber` ascending.
+        Without `chainId`, results are ordered by `recordedAt`, `chainId`,
+        `sequenceNumber`, and `eventId`, all descending. `cursor` is opaque and
+        is valid only for the same tenant, filters, and ordering mode that
+        produced it.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chainId
+          in: query
+          schema:
+            type: string
+        - name: actorId
+          in: query
+          schema:
+            type: string
+        - name: resourceType
+          in: query
+          schema:
+            type: string
+        - name: resourceId
+          in: query
+          description: Requires resourceType when supplied.
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          description: Inclusive lower bound on recordedAt.
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: Exclusive upper bound on recordedAt; must be after from.
+          schema:
+            type: string
+            format: date-time
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: cursor
+          in: query
+          description: Opaque continuation token returned as nextCursor by the preceding page.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deterministically ordered page of audit events.
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventPage'
+              examples:
+                crossChainPage:
+                  value:
+                    items:
+                      - eventId: 00000000-0000-0000-0000-000000000002
+                        chainId: tenant:tenant-7
+                        sequenceNumber: 2
+                        eventType: ACCOUNT_UPDATED
+                        actorId: authenticated-actor-42
+                        resourceType: ACCOUNT
+                        resourceId: account-123
+                        occurredAt: '2026-08-07T14:31:00Z'
+                        recordedAt: '2026-08-07T14:31:00.123456Z'
+                        payload:
+                          changedFields:
+                            - address
+                        contentHash: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+                    nextCursor: eyJ2ZXJzaW9uIjoxLCJwdXJwb3NlIjoiQVVESVRfRVZFTlRfU0VBUkNIIn0
+        '400':
+          description: Invalid pagination cursor. Other malformed query values and invalid filter combinations currently fall through to the generic 500 response; see the API contract notes.
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              examples:
+                malformedCursor:
+                  $ref: '#/components/examples/CursorMalformed'
+                unsupportedCursorVersion:
+                  $ref: '#/components/examples/CursorVersionUnsupported'
+                cursorContextMismatch:
+                  $ref: '#/components/examples/CursorContextMismatch'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /v1/audit/events/chains/{chainId}/verification:
+    get:
+      operationId: verifyAuditChain
+      summary: Verify an audit chain synchronously
+      description: |
+        Streams the selected chain and returns the first inconsistency. A
+        completed verification returns 200 even when `valid` is false or null;
+        4xx and 5xx responses mean the operation could not be performed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: chainId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Verification completed, irrespective of the validity outcome.
+          headers:
+            X-Correlation-Id:
+              $ref: '#/components/headers/CorrelationId'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationResult'
+              examples:
+                valid:
+                  value:
+                    status: VALID
+                    valid: true
+                    failureReason: null
+                    failureSequence: null
+                    verifiedCount: 5
+                    firstSequence: 1
+                    lastVerifiedSequence: 5
+                    message: The audit chain is valid.
+                invalid:
+                  value:
+                    status: INVALID
+                    valid: false
+                    failureReason: CONTENT_HASH_MISMATCH
+                    failureSequence: 3
+                    verifiedCount: 2
+                    firstSequence: 1
+                    lastVerifiedSequence: 2
+                    message: The stored content hash does not match the recalculated hash.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/ChainNotFound'
         '500':
           $ref: '#/components/responses/InternalError'
 components:
@@ -87,45 +271,39 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+      bearerFormat: JWT
   parameters:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
       required: true
-      description: Opaque caller-generated key scoped to the authenticated tenant, producer, and operation.
+      description: |
+        Non-blank opaque caller-generated key. It is scoped internally to the
+        authenticated tenant, authenticated producer, and append operation.
+        The implementation does not currently enforce a maximum length.
       schema:
         type: string
         minLength: 1
-        maxLength: 255
   headers:
     Location:
-      description: Canonical path of the created event.
+      description: Path containing the server-assigned event identifier.
       schema:
         type: string
-    IdempotencyReplayed:
-      description: True when the response replays a previously committed result.
-      schema:
-        type: boolean
     CorrelationId:
-      description: Identifier for this API attempt, used for troubleshooting.
+      description: Identifier for this HTTP attempt, used for troubleshooting.
       schema:
         type: string
   schemas:
     CreateAuditEventRequest:
       type: object
       additionalProperties: false
-      required:
-        - eventType
-        - eventSchemaVersion
-        - occurredAt
-        - actor
-        - resource
-        - payload
+      required: [eventType, eventSchemaVersion, occurredAt, actor, resource, payload]
       properties:
         eventType:
           type: string
           minLength: 1
           maxLength: 100
+          pattern: '^[A-Z][A-Z0-9_]*$'
         eventSchemaVersion:
           type: integer
           format: int32
@@ -139,14 +317,13 @@ components:
           $ref: '#/components/schemas/Resource'
         payload:
           type: object
-          description: Event-specific data validated against eventType and eventSchemaVersion.
           additionalProperties: true
+          description: Arbitrary event-specific JSON object. Producer-specific payload schemas are not enforced by the prototype.
     Actor:
       type: object
       additionalProperties: false
-      required:
-        - id
-        - type
+      description: Required by the current DTO but not authoritative; persisted actor identity comes from authentication context.
+      required: [id, type]
       properties:
         id:
           type: string
@@ -159,14 +336,13 @@ components:
     Resource:
       type: object
       additionalProperties: false
-      required:
-        - type
-        - id
+      required: [type, id]
       properties:
         type:
           type: string
           minLength: 1
           maxLength: 100
+          pattern: '^[A-Z][A-Z0-9_]*$'
         id:
           type: string
           minLength: 1
@@ -174,14 +350,7 @@ components:
     AuditEventResponse:
       type: object
       additionalProperties: false
-      required:
-        - eventId
-        - chainId
-        - sequenceNumber
-        - recordedAt
-        - contentHash
-        - hashAlgorithm
-        - canonicalizationVersion
+      required: [eventId, chainId, sequenceNumber, recordedAt, contentHash, hashAlgorithm, canonicalizationVersion]
       properties:
         eventId:
           type: string
@@ -191,30 +360,112 @@ components:
         sequenceNumber:
           type: integer
           format: int64
-          minimum: 1
         recordedAt:
           type: string
           format: date-time
         contentHash:
-          type: string
-          description: Lowercase hexadecimal digest.
-          pattern: '^[0-9a-f]{64}$'
+          $ref: '#/components/schemas/Sha256Hex'
         hashAlgorithm:
           type: string
-          enum:
-            - SHA-256
+          enum: [SHA-256]
         canonicalizationVersion:
           type: integer
           format: int32
-          minimum: 1
+    AuditEventPage:
+      type: object
+      additionalProperties: false
+      required: [items, nextCursor]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEventView'
+        nextCursor:
+          type: [string, 'null']
+          description: Opaque continuation token, or null when no later page exists.
+    AuditEventView:
+      type: object
+      additionalProperties: false
+      required: [eventId, chainId, sequenceNumber, eventType, actorId, resourceType, resourceId, occurredAt, recordedAt, payload, contentHash]
+      properties:
+        eventId:
+          type: string
+          format: uuid
+        chainId:
+          type: string
+        sequenceNumber:
+          type: integer
+          format: int64
+        eventType:
+          type: string
+        actorId:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        recordedAt:
+          type: string
+          format: date-time
+        payload:
+          type: object
+          additionalProperties: true
+        contentHash:
+          $ref: '#/components/schemas/Sha256Hex'
+    VerificationResult:
+      type: object
+      additionalProperties: false
+      required: [status, valid, failureReason, failureSequence, verifiedCount, firstSequence, lastVerifiedSequence, message]
+      properties:
+        status:
+          type: string
+          enum: [VALID, INVALID, INDETERMINATE]
+        valid:
+          type: [boolean, 'null']
+        failureReason:
+          anyOf:
+            - $ref: '#/components/schemas/VerificationFailureReason'
+            - type: 'null'
+        failureSequence:
+          type: [integer, 'null']
+          format: int64
+        verifiedCount:
+          type: integer
+          format: int64
+        firstSequence:
+          type: [integer, 'null']
+          format: int64
+        lastVerifiedSequence:
+          type: [integer, 'null']
+          format: int64
+        message:
+          type: string
+    VerificationFailureReason:
+      type: string
+      enum:
+        - UNEXPECTED_FIRST_SEQUENCE
+        - SEQUENCE_GAP
+        - PREVIOUS_HASH_MISMATCH
+        - CONTENT_HASH_MISMATCH
+        - UNSUPPORTED_CANONICALIZATION_VERSION
+        - UNSUPPORTED_HASH_ALGORITHM
+        - CHAIN_HEAD_MISMATCH
+        - MISSING_ARCHIVE_PROOF
+        - ARCHIVE_CHECKSUM_MISMATCH
+        - ARCHIVE_SIGNATURE_INVALID
+        - ARCHIVE_RANGE_INVALID
+        - ARCHIVE_CHAIN_INVALID
+        - ARCHIVE_BOUNDARY_MISMATCH
+    Sha256Hex:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
     ApiError:
       type: object
       additionalProperties: false
-      required:
-        - code
-        - message
-        - correlationId
-        - violations
+      required: [code, message, correlationId, violations]
       properties:
         code:
           type: string
@@ -229,10 +480,7 @@ components:
     FieldViolation:
       type: object
       additionalProperties: false
-      required:
-        - field
-        - code
-        - message
+      required: [field, code, message]
       properties:
         field:
           type: string
@@ -242,38 +490,145 @@ components:
           type: string
   responses:
     BadRequest:
-      description: Malformed request, missing idempotency key, or invalid field syntax.
+      description: Malformed JSON, a missing required header, or invalid request fields.
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+          examples:
+            invalidRequest:
+              $ref: '#/components/examples/InvalidRequest'
     Unauthorized:
-      description: Authentication is missing or invalid.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
+      description: Authentication is missing or invalid. Spring Security currently returns the status without the common ApiError body.
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
     Forbidden:
-      description: The authenticated producer is not permitted to append this event.
+      description: The authenticated identity lacks the required coarse endpoint role. Spring Security currently returns the status without the common ApiError body.
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
+    ChainNotFound:
+      description: The requested chain does not exist for the authenticated tenant.
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
-    Conflict:
-      description: The scoped idempotency key was previously used for different request semantics.
+          examples:
+            chainNotFound:
+              value:
+                code: CHAIN_NOT_FOUND
+                message: The audit chain was not found.
+                correlationId: request-404
+                violations: []
+    IdempotencyConflict:
+      description: The scoped idempotency key was already used for a different request.
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
-    UnprocessableEntity:
-      description: The request fails its selected event schema.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
+          examples:
+            keyReused:
+              value:
+                code: IDEMPOTENCY_KEY_REUSED
+                message: The Idempotency-Key has already been used with a different request.
+                correlationId: request-409
+                violations: []
     InternalError:
-      description: Unexpected server failure with no internal implementation details exposed.
+      description: Unexpected failure with no internal implementation details exposed.
+      headers:
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
+          examples:
+            internalError:
+              value:
+                code: INTERNAL_ERROR
+                message: The request could not be completed.
+                correlationId: request-500
+                violations: []
+    ServiceUnavailable:
+      description: Append could not complete because chain coordination remained busy or storage was temporarily unavailable.
+      headers:
+        Retry-After:
+          description: Number of seconds the caller should wait before retrying.
+          schema:
+            type: string
+            const: '1'
+        X-Correlation-Id:
+          $ref: '#/components/headers/CorrelationId'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          examples:
+            chainBusy:
+              value:
+                code: CHAIN_BUSY
+                message: The audit event could not be appended because the chain remained busy.
+                correlationId: request-503
+                violations: []
+            storageUnavailable:
+              value:
+                code: TEMPORARY_DATABASE_FAILURE
+                message: Audit storage is temporarily unavailable.
+                correlationId: request-503-db
+                violations: []
+  examples:
+    CreatedReceipt:
+      value:
+        eventId: 00000000-0000-0000-0000-000000000001
+        chainId: tenant:tenant-7
+        sequenceNumber: 815
+        recordedAt: '2026-08-07T14:30:12.456789Z'
+        contentHash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        hashAlgorithm: SHA-256
+        canonicalizationVersion: 1
+    ReplayedReceipt:
+      value:
+        eventId: 00000000-0000-0000-0000-000000000001
+        chainId: tenant:tenant-7
+        sequenceNumber: 815
+        recordedAt: '2026-08-07T14:30:12.456789Z'
+        contentHash: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+        hashAlgorithm: SHA-256
+        canonicalizationVersion: 1
+    InvalidRequest:
+      value:
+        code: INVALID_REQUEST
+        message: The request is invalid.
+        correlationId: request-400
+        violations:
+          - field: eventType
+            code: INVALID_FORMAT
+            message: The field is invalid.
+    CursorMalformed:
+      value:
+        code: CURSOR_MALFORMED
+        message: The pagination cursor is invalid.
+        correlationId: request-cursor-1
+        violations: []
+    CursorVersionUnsupported:
+      value:
+        code: CURSOR_VERSION_UNSUPPORTED
+        message: The pagination cursor is invalid.
+        correlationId: request-cursor-2
+        violations: []
+    CursorContextMismatch:
+      value:
+        code: CURSOR_CONTEXT_MISMATCH
+        message: The pagination cursor is invalid.
+        correlationId: request-cursor-3
+        violations: []
